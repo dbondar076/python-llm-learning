@@ -1,0 +1,17 @@
+[
+  {
+    "id": "doc1",
+    "title": "Python",
+    "text": "Python is a high-level programming language. It is widely used for web development, automation, data analysis, and AI."
+  },
+  {
+    "id": "doc2",
+    "title": "FastAPI",
+    "text": "FastAPI is a modern Python framework for building APIs. It provides automatic validation and interactive API documentation."
+  },
+  {
+    "id": "doc3",
+    "title": "LLM",
+    "text": "Large language models work with text tokens. They can summarize, classify, extract data, and answer questions."
+  }
+]

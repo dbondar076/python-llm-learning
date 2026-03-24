@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.python-version
+
+# Virtualenv
+.venv/
+venv/
+
+# Env files
+.env
+.env.*
+
+# PyCharm / JetBrains
+.idea/
+
+# Pytest
+.pytest_cache/
+
+# Mypy / Ruff / coverage
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store

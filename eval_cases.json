@@ -1,0 +1,25 @@
+[
+  {
+    "input": "What is Python?",
+    "expected_category": "question",
+    "summary_rules": {
+      "must_contain": ["python"],
+      "must_contain_one_of": ["definition", "question", "asking", "request"]
+    }
+  },
+  {
+    "input": "Hi",
+    "expected_category": "short",
+    "summary_rules": {
+      "must_contain_one_of": ["greeting", "hi"]
+    }
+  },
+  {
+    "input": "Python is a programming language.",
+    "expected_category": "statement",
+    "summary_rules": {
+      "must_contain": ["python"],
+      "must_contain_one_of": ["programming language", "language"]
+    }
+  }
+]

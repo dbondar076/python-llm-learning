@@ -1,0 +1,298 @@
+import asyncio
+import json
+import math
+import re
+from typing import TypedDict
+
+from openai import OpenAI
+
+from app.settings import OPENAI_API_KEY
+from app.services.llm_service import run_text_prompt_with_retry_async
+
+
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+
+class Document(TypedDict):
+    id: str
+    title: str
+    text: str
+
+
+class Chunk(TypedDict):
+    doc_id: str
+    title: str
+    chunk_id: str
+    text: str
+
+
+class KeywordScoredChunk(TypedDict):
+    doc_id: str
+    title: str
+    chunk_id: str
+    text: str
+    score: int
+
+
+class SemanticScoredChunk(TypedDict):
+    doc_id: str
+    title: str
+    chunk_id: str
+    text: str
+    score: float
+
+
+STOPWORDS = {
+    "a",
+    "an",
+    "the",
+    "is",
+    "are",
+    "was",
+    "were",
+    "what",
+    "how",
+    "why",
+    "can",
+    "be",
+    "for",
+    "of",
+    "and",
+    "to",
+    "it",
+    "in",
+    "on",
+    "with",
+}
+
+NO_ANSWER = "I don't know based on the provided context."
+
+
+def load_documents(file_path: str) -> list[Document]:
+    with open(file_path, "r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def split_text_into_sentence_chunks(text: str) -> list[str]:
+    sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+    return [sentence for sentence in sentences if sentence]
+
+
+def build_chunks(documents: list[Document]) -> list[Chunk]:
+    result: list[Chunk] = []
+
+    for doc in documents:
+        sentences = split_text_into_sentence_chunks(doc["text"])
+
+        for i, sentence in enumerate(sentences, start=1):
+            result.append(
+                {
+                    "doc_id": doc["id"],
+                    "title": doc["title"],
+                    "chunk_id": f"{doc['id']}_chunk_{i}",
+                    "text": sentence,
+                }
+            )
+
+    return result
+
+
+def tokenize(text: str) -> list[str]:
+    raw_tokens = re.findall(r"\b[a-zA-Z]+\b", text.lower())
+    return [token for token in raw_tokens if token not in STOPWORDS]
+
+
+# ----------------------------
+# KEYWORD RETRIEVAL
+# ----------------------------
+
+def score_chunk_keyword(query: str, chunk: Chunk) -> int:
+    query_tokens = set(tokenize(query))
+    title_tokens = set(tokenize(chunk["title"]))
+    text_tokens = set(tokenize(chunk["text"]))
+
+    score = 0
+
+    for token in query_tokens:
+        if token in title_tokens:
+            score += 3
+        if token in text_tokens:
+            score += 1
+
+    return score
+
+
+def retrieve_top_chunks_keyword(
+    query: str,
+    chunks: list[Chunk],
+    top_k: int = 3,
+) -> list[KeywordScoredChunk]:
+    scored: list[KeywordScoredChunk] = []
+
+    for chunk in chunks:
+        score = score_chunk_keyword(query, chunk)
+
+        if score > 0:
+            scored.append(
+                {
+                    "doc_id": chunk["doc_id"],
+                    "title": chunk["title"],
+                    "chunk_id": chunk["chunk_id"],
+                    "text": chunk["text"],
+                    "score": score,
+                }
+            )
+
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    return scored[:top_k]
+
+
+def should_answer_keyword(chunks: list[KeywordScoredChunk], min_score: int = 2) -> bool:
+    if not chunks:
+        return False
+    return chunks[0]["score"] >= min_score
+
+
+# ----------------------------
+# SEMANTIC RETRIEVAL
+# ----------------------------
+
+def cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
+    dot = sum(a * b for a, b in zip(vec1, vec2))
+    norm1 = math.sqrt(sum(a * a for a in vec1))
+    norm2 = math.sqrt(sum(b * b for b in vec2))
+
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+
+    return dot / (norm1 * norm2)
+
+
+def get_embeddings(texts: list[str]) -> list[list[float]]:
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=texts,
+    )
+    return [item.embedding for item in response.data]
+
+
+def retrieve_top_chunks_semantic(
+    query: str,
+    chunks: list[Chunk],
+    chunk_embeddings: list[list[float]],
+    top_k: int = 3,
+) -> list[SemanticScoredChunk]:
+    query_embedding = get_embeddings([query])[0]
+    scored: list[SemanticScoredChunk] = []
+
+    for chunk, chunk_embedding in zip(chunks, chunk_embeddings):
+        score = cosine_similarity(query_embedding, chunk_embedding)
+        scored.append(
+            {
+                "doc_id": chunk["doc_id"],
+                "title": chunk["title"],
+                "chunk_id": chunk["chunk_id"],
+                "text": chunk["text"],
+                "score": score,
+            }
+        )
+
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    return scored[:top_k]
+
+
+def should_answer_semantic(chunks: list[SemanticScoredChunk], min_score: float = 0.52) -> bool:
+    if not chunks:
+        return False
+    return chunks[0]["score"] >= min_score
+
+
+# ----------------------------
+# RAG GENERATION
+# ----------------------------
+
+def build_context(chunks: list[dict]) -> str:
+    return "\n".join(
+        f"[{chunk['title']} | {chunk['chunk_id']}] {chunk['text']}"
+        for chunk in chunks
+    )
+
+
+def build_rag_prompt(question: str, context: str) -> str:
+    return (
+        "Answer the user's question using only the provided context.\n"
+        "If the answer is not in the context, say exactly: I don't know based on the provided context.\n"
+        "Do not guess.\n"
+        "Be concise.\n\n"
+        f"Context:\n{context}\n\n"
+        f"Question:\n{question}"
+    )
+
+
+async def answer_with_keyword_rag(question: str, chunks: list[Chunk]) -> tuple[list[KeywordScoredChunk], str]:
+    top_chunks = retrieve_top_chunks_keyword(question, chunks, top_k=3)
+
+    if not should_answer_keyword(top_chunks, min_score=2):
+        return top_chunks, NO_ANSWER
+
+    context = build_context(top_chunks)
+    prompt = build_rag_prompt(question, context)
+    answer = await run_text_prompt_with_retry_async(prompt)
+    return top_chunks, answer
+
+
+async def answer_with_semantic_rag(
+    question: str,
+    chunks: list[Chunk],
+    chunk_embeddings: list[list[float]],
+) -> tuple[list[SemanticScoredChunk], str]:
+    top_chunks = retrieve_top_chunks_semantic(question, chunks, chunk_embeddings, top_k=3)
+
+    if not should_answer_semantic(top_chunks, min_score=0.52):
+        return top_chunks, NO_ANSWER
+
+    context = build_context(top_chunks)
+    prompt = build_rag_prompt(question, context)
+    answer = await run_text_prompt_with_retry_async(prompt)
+    return top_chunks, answer
+
+
+async def main() -> None:
+    documents = load_documents("../documents.json")
+    chunks = build_chunks(documents)
+    chunk_embeddings = get_embeddings([chunk["text"] for chunk in chunks])
+
+    questions = [
+        "What can Python be used for?",
+        "API framework in Python",
+        "What is JavaScript used for?",
+    ]
+
+    for question in questions:
+        keyword_chunks, keyword_answer = await answer_with_keyword_rag(question, chunks)
+        semantic_chunks, semantic_answer = await answer_with_semantic_rag(question, chunks, chunk_embeddings)
+
+        print("QUESTION:", question)
+        print("=" * 70)
+
+        print("KEYWORD RAG")
+        print("-" * 20)
+        print("CHUNKS:")
+        for item in keyword_chunks:
+            print(f"{item['score']} | [{item['title']}] {item['text']}")
+        print("ANSWER:")
+        print(keyword_answer)
+
+        print("\nSEMANTIC RAG")
+        print("-" * 20)
+        print("CHUNKS:")
+        for item in semantic_chunks:
+            print(f"{round(item['score'], 4)} | [{item['title']}] {item['text']}")
+        print("ANSWER:")
+        print(semantic_answer)
+
+        print("\n" + "#" * 70 + "\n")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
