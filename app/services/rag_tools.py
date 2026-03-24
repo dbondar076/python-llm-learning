@@ -1,3 +1,4 @@
+import logging
 from app.settings import RAG_TOP_K
 from app.services.llm_service import run_text_prompt_with_retry_async
 from app.services.rag_answer_service import (
@@ -7,6 +8,9 @@ from app.services.rag_answer_service import (
 )
 from app.services.rag_index_service import ChunkEmbeddingRecord
 from app.services.rag_retrieval_service import ScoredChunk, retrieve_top_chunks
+
+
+logger = logging.getLogger(__name__)
 
 
 # ----------------------------
@@ -100,3 +104,36 @@ async def route_question_with_llm(question: str) -> str:
         return "direct"
 
     return route
+
+
+async def rewrite_question_with_memory_tool(
+    previous_user_message: str,
+    previous_agent_answer: str | None,
+    current_user_message: str,
+) -> str:
+    prompt = (
+        "Rewrite the current user message into a standalone factual query using the previous conversation context.\n"
+        "The rewritten query will be used for semantic search in a technical knowledge base about software, programming, APIs, and AI.\n\n"
+        "Rules:\n"
+        "- Use only information present in the conversation\n"
+        "- Do NOT invent missing context\n"
+        "- Do NOT ask the user a question\n"
+        "- Do NOT be conversational\n"
+        "- Keep the rewrite short and literal\n"
+        "- Return ONLY the rewritten query\n\n"
+        f"Previous user message:\n{previous_user_message}\n\n"
+        f"Previous agent message:\n{previous_agent_answer or ''}\n\n"
+        f"Current user message:\n{current_user_message}"
+    )
+
+    result = await run_text_prompt_with_retry_async(prompt)
+
+    logger.info(
+        "Rewrite tool result: prev_user=%r prev_agent=%r current=%r rewritten=%r",
+        previous_user_message,
+        previous_agent_answer,
+        current_user_message,
+        result,
+    )
+
+    return result

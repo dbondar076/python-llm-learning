@@ -87,6 +87,7 @@ async def rag_answer(
     chunks, answer = await run_rag_agent(
         question=request.question,
         records=records,
+        session_id=request.session_id,
         top_k=request.top_k,
         min_score=request.min_score,
         title_filter=request.title_filter,
@@ -133,6 +134,7 @@ async def rag_answer_stream(
     chunks, answer = await run_rag_agent( #run_rag_agent_langgraph(
         question=request.question,
         records=records,
+        session_id=request.session_id,
         top_k=request.top_k,
         min_score=request.min_score,
         title_filter=request.title_filter,

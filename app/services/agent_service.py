@@ -11,6 +11,7 @@ from app.services.rag_tools import (
     direct_answer_tool,
     clarify_question_tool,
     route_question_with_llm,
+    rewrite_question_with_memory_tool,
 )
 from app.services.conversation_memory import (
     get_conversation_state,
@@ -27,18 +28,28 @@ class AgentState(TypedDict, total=False):
     answer: str
 
 
-def resolve_question_with_memory(
+async def resolve_question_with_memory(
     question: str,
     memory: dict | None,
 ) -> str:
     if not memory:
+        print("RESOLVE: no memory")
         return question
 
     last_route = memory.get("last_agent_route")
     last_user_message = memory.get("last_user_message")
+    last_agent_answer = memory.get("last_agent_answer")
+
+    print("RESOLVE memory:", memory)
 
     if last_route == "clarify" and last_user_message:
-        return f"{last_user_message} {question}"
+        rewritten = await rewrite_question_with_memory_tool(
+            previous_user_message=last_user_message,
+            current_user_message=question,
+            previous_agent_answer=last_agent_answer,
+        )
+        print("RESOLVE rewritten:", rewritten)
+        return rewritten
 
     return question
 
@@ -185,8 +196,14 @@ async def run_rag_agent(
         memory = get_conversation_state(session_id)
         logger.info("Loaded memory: %s", memory)
 
-    question = resolve_question_with_memory(question, memory)
+    question = await resolve_question_with_memory(question, memory)
     state["question"] = question
+
+    logger.info(
+        "Resolved question: original=%r resolved=%r",
+        original_question,
+        question,
+    )
 
     if question != original_question:
         logger.info(

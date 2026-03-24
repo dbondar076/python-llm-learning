@@ -12,8 +12,8 @@ from app.routers.rag import router as rag_router
 from app.services.rag_index_service import load_chunk_embeddings
 
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
