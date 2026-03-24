@@ -12,7 +12,10 @@ from app.services.rag_tools import (
     clarify_question_tool,
     route_question_with_llm,
 )
-
+from app.services.conversation_memory import (
+    get_conversation_state,
+    save_conversation_state,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +25,22 @@ class AgentState(TypedDict, total=False):
     route: str
     top_chunks: list[ScoredChunk]
     answer: str
+
+
+def resolve_question_with_memory(
+    question: str,
+    memory: dict | None,
+) -> str:
+    if not memory:
+        return question
+
+    last_route = memory.get("last_agent_route")
+    last_user_message = memory.get("last_user_message")
+
+    if last_route == "clarify" and last_user_message:
+        return f"{last_user_message} {question}"
+
+    return question
 
 
 def should_use_rag(question: str) -> bool:
@@ -126,9 +145,28 @@ async def fallback_no_answer(state: AgentState) -> AgentState:
     return state
 
 
+def save_memory_if_needed(
+    session_id: str | None,
+    question: str,
+    state: AgentState,
+) -> None:
+    if not session_id:
+        return
+
+    save_conversation_state(
+        session_id,
+        {
+            "last_user_message": question,
+            "last_agent_route": state.get("route"),
+            "last_agent_answer": state.get("answer"),
+        },
+    )
+
+
 async def run_rag_agent(
     question: str,
     records: list[ChunkEmbeddingRecord],
+    session_id: str | None = None,
     top_k: int = RAG_TOP_K,
     min_score: float = RAG_MIN_SCORE,
     title_filter: str | None = None,
@@ -138,7 +176,24 @@ async def run_rag_agent(
         "question": question,
     }
 
-    logger.info("Agent started for question=%r", question)
+    logger.info("Agent started for question=%r session_id=%r", question, session_id)
+
+    memory = None
+    original_question = question
+
+    if session_id:
+        memory = get_conversation_state(session_id)
+        logger.info("Loaded memory: %s", memory)
+
+    question = resolve_question_with_memory(question, memory)
+    state["question"] = question
+
+    if question != original_question:
+        logger.info(
+            "Resolved question with memory: original=%r resolved=%r",
+            original_question,
+            question,
+        )
 
     state = await route_question(state)
 
@@ -153,6 +208,7 @@ async def run_rag_agent(
             len(state.get("top_chunks", [])),
         )
 
+        save_memory_if_needed(session_id, question, state)
         return state["top_chunks"], state["answer"]
 
     if state["route"] == "clarify":
@@ -166,6 +222,7 @@ async def run_rag_agent(
             len(state.get("top_chunks", [])),
         )
 
+        save_memory_if_needed(session_id, question, state)
         return state["top_chunks"], state["answer"]
 
     state = await retrieve_context(
@@ -193,4 +250,5 @@ async def run_rag_agent(
         len(state.get("top_chunks", [])),
     )
 
+    save_memory_if_needed(session_id, question, state)
     return state.get("top_chunks", []), state["answer"]

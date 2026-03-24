@@ -48,10 +48,6 @@ class SafeTextAnalysis(BaseModel):
 # RAG
 # ----------------------------
 
-class RagRequest(BaseModel):
-    question: str
-
-
 class RagChunk(BaseModel):
     doc_id: str
     title: str
@@ -89,6 +85,7 @@ class RagSearchRequest(BaseModel):
 
 class RagAnswerRequest(BaseModel):
     question: str
+    session_id: str | None = None
     top_k: int = Field(default=3, ge=1, le=20)
     min_score: float = Field(default=0.52, ge=0.0, le=1.0)
     title_filter: str | None = None
@@ -98,6 +95,7 @@ class RagAnswerRequest(BaseModel):
         json_schema_extra={
             "example": {
                 "question": "What can Python be used for?",
+                "session_id": "demo-1",
                 "top_k": 3,
                 "min_score": 0.52,
                 "title_filter": None,
