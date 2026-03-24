@@ -1,3 +1,4 @@
+import logging
 from typing import TypedDict
 
 from app.settings import RAG_MIN_SCORE, RAG_TOP_K
@@ -5,10 +6,14 @@ from app.services.rag_answer_service import NO_ANSWER
 from app.services.rag_index_service import ChunkEmbeddingRecord
 from app.services.rag_retrieval_service import ScoredChunk, should_answer
 from app.services.rag_tools import (
-    generate_grounded_answer_tool,
-    search_chunks_tool,
     direct_answer_tool,
+    generate_grounded_answer_tool,
+    route_question_with_llm,
+    search_chunks_tool,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class AgentState(TypedDict, total=False):
@@ -40,10 +45,24 @@ def should_use_rag(question: str) -> bool:
 
 
 async def route_question(state: AgentState) -> AgentState:
-    if should_use_rag(state["question"]):
-        state["route"] = "rag"
-    else:
-        state["route"] = "direct"
+    question = state["question"]
+
+    try:
+        route = await route_question_with_llm(question)
+        state["route"] = route
+        logger.info("Agent router selected route=%s for question=%r", route, question)
+    except Exception as exc:
+        if should_use_rag(question):
+            state["route"] = "rag"
+        else:
+            state["route"] = "direct"
+
+        logger.warning(
+            "Agent router fallback route=%s for question=%r due to error: %s",
+            state["route"],
+            question,
+            exc,
+        )
 
     return state
 
@@ -78,6 +97,14 @@ async def decide_after_retrieval(
     else:
         state["route"] = "fallback"
 
+    top_score = top_chunks[0]["score"] if top_chunks else None
+    logger.info(
+        "Agent retrieval decision route=%s top_score=%s chunk_count=%s",
+        state["route"],
+        top_score,
+        len(top_chunks),
+    )
+
     return state
 
 
@@ -110,6 +137,8 @@ async def run_rag_agent(
         "question": question,
     }
 
+    logger.info("Agent started for question=%r", question)
+
     state = await route_question(state)
 
     if state["route"] == "direct":
@@ -134,5 +163,12 @@ async def run_rag_agent(
         state = await generate_answer_node(state)
     else:
         state = await fallback_no_answer(state)
+
+    logger.info(
+        "Agent finished route=%s answer_len=%s chunk_count=%s",
+        state.get("route"),
+        len(state.get("answer", "")),
+        len(state.get("top_chunks", [])),
+    )
 
     return state.get("top_chunks", []), state["answer"]

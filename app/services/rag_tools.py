@@ -44,3 +44,23 @@ async def direct_answer_tool(question: str) -> str:
         f"User message:\n{question}"
     )
     return await run_text_prompt_with_retry_async(prompt)
+
+
+async def route_question_with_llm(question: str) -> str:
+    prompt = (
+        "You are a routing assistant.\n"
+        "Decide how the system should handle the user's message.\n"
+        "Return exactly one word:\n"
+        "- direct -> for greetings, small talk, or simple conversational messages\n"
+        "- rag -> for factual questions that may need retrieval from a knowledge base\n"
+        "Do not explain your choice.\n\n"
+        f"User message:\n{question}"
+    )
+
+    raw_result = await run_text_prompt_with_retry_async(prompt)
+    route = raw_result.strip().lower()
+
+    if route not in {"direct", "rag"}:
+        return "rag"
+
+    return route
