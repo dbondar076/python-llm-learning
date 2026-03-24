@@ -7,8 +7,8 @@ from fastapi.responses import StreamingResponse
 
 from app.dependencies import get_rag_records
 from app.models import RagAnswerRequest, RagChunk, RagResponse, RagSearchRequest, RagSearchResponse
-# from app.services.agent_service import run_rag_agent
-from app.services.langgraph_rag_agent import run_rag_agent_langgraph
+from app.services.agent_service import run_rag_agent
+# from app.services.langgraph_rag_agent import run_rag_agent_langgraph
 from app.services.rag_index_service import ChunkEmbeddingRecord
 from app.services.rag_retrieval_service import retrieve_top_chunks
 
@@ -84,16 +84,7 @@ async def rag_answer(
 ) -> RagResponse:
     logger.info("Received /rag/answer request: %s", request.question)
 
-    # chunks, answer = await run_rag_agent(
-    #     question=request.question,
-    #     records=records,
-    #     top_k=request.top_k,
-    #     min_score=request.min_score,
-    #     title_filter=request.title_filter,
-    #     doc_id_filter=request.doc_id_filter,
-    # )
-
-    chunks, answer = await run_rag_agent_langgraph(
+    chunks, answer = await run_rag_agent(
         question=request.question,
         records=records,
         top_k=request.top_k,
@@ -101,6 +92,15 @@ async def rag_answer(
         title_filter=request.title_filter,
         doc_id_filter=request.doc_id_filter,
     )
+
+    # chunks, answer = await run_rag_agent_langgraph(
+    #     question=request.question,
+    #     records=records,
+    #     top_k=request.top_k,
+    #     min_score=request.min_score,
+    #     title_filter=request.title_filter,
+    #     doc_id_filter=request.doc_id_filter,
+    # )
 
     response_chunks = [
         RagChunk(
@@ -130,7 +130,7 @@ async def rag_answer_stream(
 ) -> StreamingResponse:
     logger.info("Received /rag/answer/stream request: %s", request.question)
 
-    chunks, answer = await run_rag_agent_langgraph(
+    chunks, answer = await run_rag_agent( #run_rag_agent_langgraph(
         question=request.question,
         records=records,
         top_k=request.top_k,
