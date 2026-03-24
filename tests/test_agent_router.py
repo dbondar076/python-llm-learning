@@ -78,3 +78,23 @@ async def test_route_question_falls_back_to_heuristic_rag(
     result = await route_question(state)
 
     assert result["route"] == "rag"
+
+
+@pytest.mark.asyncio
+async def test_route_question_uses_llm_router_clarify(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_route_question_with_llm(question: str) -> str:
+        assert question == "what about that?"
+        return "clarify"
+
+    monkeypatch.setattr(
+        "app.services.agent_service.route_question_with_llm",
+        fake_route_question_with_llm,
+    )
+
+    state = {"question": "what about that?"}
+
+    result = await route_question(state)
+
+    assert result["route"] == "clarify"

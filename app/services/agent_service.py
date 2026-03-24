@@ -6,10 +6,11 @@ from app.services.rag_answer_service import NO_ANSWER
 from app.services.rag_index_service import ChunkEmbeddingRecord
 from app.services.rag_retrieval_service import ScoredChunk, should_answer
 from app.services.rag_tools import (
-    direct_answer_tool,
-    generate_grounded_answer_tool,
-    route_question_with_llm,
     search_chunks_tool,
+    generate_grounded_answer_tool,
+    direct_answer_tool,
+    clarify_question_tool,
+    route_question_with_llm,
 )
 
 
@@ -144,6 +145,27 @@ async def run_rag_agent(
     if state["route"] == "direct":
         state["top_chunks"] = []
         state["answer"] = await direct_answer_tool(state["question"])
+
+        logger.info(
+            "Agent finished route=%s answer_len=%s chunk_count=%s",
+            state.get("route"),
+            len(state.get("answer", "")),
+            len(state.get("top_chunks", [])),
+        )
+
+        return state["top_chunks"], state["answer"]
+
+    if state["route"] == "clarify":
+        state["top_chunks"] = []
+        state["answer"] = await clarify_question_tool(state["question"])
+
+        logger.info(
+            "Agent finished route=%s answer_len=%s chunk_count=%s",
+            state.get("route"),
+            len(state.get("answer", "")),
+            len(state.get("top_chunks", [])),
+        )
+
         return state["top_chunks"], state["answer"]
 
     state = await retrieve_context(
