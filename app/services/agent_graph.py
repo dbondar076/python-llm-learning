@@ -53,6 +53,7 @@ async def direct_node(state: GraphState) -> GraphState:
     return {
         "answer": answer,
         "top_chunks": [],
+        "route": "direct",
     }
 
 
@@ -61,6 +62,7 @@ async def clarify_node(state: GraphState) -> GraphState:
     return {
         "answer": answer,
         "top_chunks": [],
+        "route": "clarify",
     }
 
 
@@ -80,11 +82,17 @@ async def answer_node(state: GraphState) -> GraphState:
         question=state["question"],
         chunks=state.get("top_chunks", []),
     )
-    return {"answer": answer}
+    return {
+        "answer": answer,
+        "route": "answer",
+    }
 
 
 async def fallback_node(state: GraphState) -> GraphState:
-    return {"answer": NO_ANSWER}
+    return {
+        "answer": NO_ANSWER,
+        "route": "fallback",
+    }
 
 
 def route_after_router(state: GraphState) -> str:
@@ -241,3 +249,17 @@ def save_memory_if_needed(
             "last_agent_answer": result.get("answer"),
         },
     )
+
+
+def build_langgraph_meta(state: GraphState) -> dict:
+    top_chunks = state.get("top_chunks", [])
+    top_score = top_chunks[0]["score"] if top_chunks else None
+
+    return {
+        "initial_route": state.get("initial_route"),
+        "final_route": state.get("route"),
+        "original_question": state.get("original_question"),
+        "resolved_question": state.get("question"),
+        "top_score": top_score,
+        "chunk_count": len(top_chunks),
+    }
