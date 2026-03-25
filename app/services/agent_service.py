@@ -50,7 +50,13 @@ async def resolve_question_with_memory(
             current_user_message=question,
             previous_agent_answer=last_agent_answer,
         )
-        print("RESOLVE rewritten:", rewritten)
+        logger.info("Rewrite candidate: %r", rewritten)
+
+        if not rewritten or is_bad_rewrite(rewritten):
+            fallback = build_fallback_rewrite(question)
+            logger.info("Rejected bad rewrite, fallback rewrite=%r", fallback)
+            return fallback
+
         return rewritten
 
     return question
@@ -209,6 +215,38 @@ def build_agent_meta(state: AgentState) -> dict:
         "top_score": top_score,
         "chunk_count": len(top_chunks),
     }
+
+
+def is_bad_rewrite(text: str) -> bool:
+    lowered = text.lower().strip()
+
+    bad_patterns = [
+        "clarify",
+        "refers to",
+        "refer to",
+        "reference to",
+        "previous message",
+        "user message",
+        "current user message",
+        "when the user",
+        "the user replies",
+        "the user replied",
+        "meaning of",
+        "in the context of",
+        "what does",
+        "what do you mean",
+    ]
+
+    return any(pattern in lowered for pattern in bad_patterns)
+
+
+def build_fallback_rewrite(current_user_message: str) -> str:
+    text = current_user_message.strip()
+
+    if not text:
+        return current_user_message
+
+    return f"Information about {text}"
 
 
 async def run_rag_agent(

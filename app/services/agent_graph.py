@@ -266,8 +266,21 @@ def build_langgraph_meta(state: GraphState) -> dict:
 
 
 def build_langgraph_response(state: GraphState) -> dict:
+    raw_chunks = state.get("top_chunks", [])
+
+    public_chunks = [
+        {
+            "doc_id": c["doc_id"],
+            "title": c["title"],
+            "chunk_id": c["chunk_id"],
+            "text": c["text"],
+            "score": c["score"],
+        }
+        for c in raw_chunks
+    ]
+
     return {
         "answer": state.get("answer", ""),
-        "chunks": state.get("top_chunks", []),
+        "chunks": public_chunks,
         "meta": build_langgraph_meta(state),
     }

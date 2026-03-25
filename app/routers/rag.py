@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 
+from collections.abc import AsyncGenerator
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
@@ -19,24 +20,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["RAG"])
 
 
-async def stream_text_chunks(answer: str, chunk_size: int = 20):
-    for i in range(0, len(answer), chunk_size):
-        chunk = answer[i:i + chunk_size]
-
+async def stream_text_chunks(
+    text: str,
+    chunk_size: int = 20,
+) -> AsyncGenerator[str, None]:
+    for i in range(0, len(text), chunk_size):
+        chunk = text[i:i + chunk_size]
         yield json.dumps(
             {
                 "type": "chunk",
                 "content": chunk,
             }
         ) + "\n"
-
-        await asyncio.sleep(0.05)
-
-    yield json.dumps(
-        {
-            "type": "done",
-        }
-    ) + "\n"
 
 
 @router.post(
@@ -195,6 +190,49 @@ async def rag_answer_stream(
 
         async for item in stream_text_chunks(answer):
             yield item
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="application/x-ndjson",
+    )
+
+
+@router.post(
+    "/rag/answer/langgraph/stream",
+    summary="Stream answer with RAG via LangGraph",
+    description="Retrieve relevant chunks and stream a grounded answer using the LangGraph agent.",
+)
+async def rag_answer_langgraph_stream(
+    request: RagAnswerRequest,
+    records: list[ChunkEmbeddingRecord] = Depends(get_rag_records),
+) -> StreamingResponse:
+    logger.info("Received /rag/answer/langgraph/stream request: %s", request.question)
+
+    state = await run_langgraph_agent(
+        question=request.question,
+        records=records,
+        session_id=request.session_id,
+        top_k=request.top_k,
+        min_score=request.min_score,
+        title_filter=request.title_filter,
+        doc_id_filter=request.doc_id_filter,
+    )
+
+    result = build_langgraph_response(state)
+
+    async def event_stream() -> AsyncGenerator[str, None]:
+        yield json.dumps(
+            {
+                "type": "meta",
+                "meta": result["meta"],
+                "chunks": result["chunks"],
+            }
+        ) + "\n"
+
+        async for item in stream_text_chunks(result["answer"]):
+            yield item
+
+        yield json.dumps({"type": "done"}) + "\n"
 
     return StreamingResponse(
         event_stream(),
