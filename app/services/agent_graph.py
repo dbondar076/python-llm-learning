@@ -1,5 +1,6 @@
 from typing import TypedDict
 
+from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from app.settings import RAG_MIN_SCORE, RAG_TOP_K
@@ -13,14 +14,21 @@ from app.services.rag_tools import (
     route_question_with_llm,
     search_chunks_tool,
 )
-from app.services.conversation_memory import (
-    get_conversation_state,
-)
 from app.services.agent_runtime import (
     resolve_question_with_memory,
     should_force_rag_for_resolved_question,
-    save_memory_if_needed,
 )
+
+
+_CHECKPOINTER = InMemorySaver()
+_GRAPH = None
+
+
+def get_agent_graph():
+    global _GRAPH
+    if _GRAPH is None:
+        _GRAPH = build_agent_graph()
+    return _GRAPH
 
 
 class GraphState(TypedDict, total=False):
@@ -158,7 +166,7 @@ def build_agent_graph():
     graph.add_edge("answer", END)
     graph.add_edge("fallback", END)
 
-    return graph.compile()
+    return graph.compile(checkpointer=_CHECKPOINTER)
 
 
 async def run_langgraph_agent(
@@ -170,13 +178,23 @@ async def run_langgraph_agent(
     title_filter: str | None = None,
     doc_id_filter: str | None = None,
 ) -> GraphState:
-    graph = build_agent_graph()
+    graph = get_agent_graph()
 
     original_question = question
     memory = None
+    config = None
 
     if session_id:
-        memory = get_conversation_state(session_id)
+        config = {"configurable": {"thread_id": session_id}}
+        snapshot = await graph.aget_state(config)
+
+        if snapshot and snapshot.values:
+            values = snapshot.values
+            memory = {
+                "last_user_message": values.get("original_question") or values.get("question") or "",
+                "last_agent_route": values.get("route"),
+                "last_agent_answer": values.get("answer"),
+            }
 
     question = await resolve_question_with_memory(question, memory)
 
@@ -189,10 +207,10 @@ async def run_langgraph_agent(
             "min_score": min_score,
             "title_filter": title_filter,
             "doc_id_filter": doc_id_filter,
-        }
+        },
+        config=config,
     )
 
-    save_memory_if_needed(session_id, original_question, result)
     return result
 
 
