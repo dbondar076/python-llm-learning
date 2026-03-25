@@ -84,7 +84,7 @@ async def rag_answer(
 ) -> RagResponse:
     logger.info("Received /rag/answer request: %s", request.question)
 
-    chunks, answer = await run_rag_agent(
+    chunks, answer, meta = await run_rag_agent(
         question=request.question,
         records=records,
         session_id=request.session_id,
@@ -117,6 +117,7 @@ async def rag_answer(
     return RagResponse(
         answer=answer,
         chunks=response_chunks,
+        meta=meta,
     )
 
 

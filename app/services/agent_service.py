@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 class AgentState(TypedDict, total=False):
     question: str
+    original_question: str
     route: str
+    initial_route: str
     top_chunks: list[ScoredChunk]
     answer: str
 
@@ -195,6 +197,20 @@ def save_memory_if_needed(
     )
 
 
+def build_agent_meta(state: AgentState) -> dict:
+    top_chunks = state.get("top_chunks", [])
+    top_score = top_chunks[0]["score"] if top_chunks else None
+
+    return {
+        "initial_route": state.get("initial_route"),
+        "final_route": state.get("route"),
+        "original_question": state.get("original_question"),
+        "resolved_question": state.get("question"),
+        "top_score": top_score,
+        "chunk_count": len(top_chunks),
+    }
+
+
 async def run_rag_agent(
     question: str,
     records: list[ChunkEmbeddingRecord],
@@ -203,9 +219,10 @@ async def run_rag_agent(
     min_score: float = RAG_MIN_SCORE,
     title_filter: str | None = None,
     doc_id_filter: str | None = None,
-) -> tuple[list[ScoredChunk], str]:
+) -> tuple[list[ScoredChunk], str, dict]:
     state: AgentState = {
         "question": question,
+        "original_question": question,
     }
 
     logger.info("Agent started for question=%r session_id=%r", question, session_id)
@@ -235,6 +252,8 @@ async def run_rag_agent(
 
     state = await route_question(state)
 
+    state["initial_route"] = state["route"]
+
     if state["route"] == "clarify" and should_force_rag_for_resolved_question(state["question"]):
         logger.info(
             "Overriding clarify -> rag for resolved technical question=%r",
@@ -254,7 +273,7 @@ async def run_rag_agent(
         )
 
         save_memory_if_needed(session_id, question, state)
-        return state["top_chunks"], state["answer"]
+        return state["top_chunks"], state["answer"], build_agent_meta(state)
 
     if state["route"] == "clarify":
         state["top_chunks"] = []
@@ -268,7 +287,7 @@ async def run_rag_agent(
         )
 
         save_memory_if_needed(session_id, question, state)
-        return state["top_chunks"], state["answer"]
+        return state["top_chunks"], state["answer"], build_agent_meta(state)
 
     state = await retrieve_context(
         state=state,
@@ -296,4 +315,4 @@ async def run_rag_agent(
     )
 
     save_memory_if_needed(session_id, question, state)
-    return state.get("top_chunks", []), state["answer"]
+    return state.get("top_chunks", []), state["answer"], build_agent_meta(state)

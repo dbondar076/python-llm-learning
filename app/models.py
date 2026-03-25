@@ -48,6 +48,15 @@ class SafeTextAnalysis(BaseModel):
 # RAG
 # ----------------------------
 
+class RagMeta(BaseModel):
+    initial_route: str | None = None
+    final_route: str | None = None
+    original_question: str | None = None
+    resolved_question: str | None = None
+    top_score: float | None = None
+    chunk_count: int
+
+
 class RagChunk(BaseModel):
     doc_id: str
     title: str
@@ -59,6 +68,7 @@ class RagChunk(BaseModel):
 class RagResponse(BaseModel):
     answer: str
     chunks: list[RagChunk]
+    meta: RagMeta | None = None
 
 
 class RagSearchResponse(BaseModel):
