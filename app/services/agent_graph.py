@@ -1,5 +1,7 @@
+import uuid
 from typing import TypedDict
 
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 
@@ -34,6 +36,7 @@ def get_agent_graph():
 class GraphState(TypedDict, total=False):
     question: str
     original_question: str
+    messages: list
     initial_route: str
     route: str
     top_chunks: list[ScoredChunk]
@@ -58,24 +61,33 @@ async def route_node(state: GraphState) -> GraphState:
         "initial_route": initial_route,
         "question": state["question"],
         "original_question": state.get("original_question"),
+        "messages": state.get("messages", []),
     }
 
 
 async def direct_node(state: GraphState) -> GraphState:
     answer = await direct_answer_tool(state["question"])
+    messages = list(state.get("messages", []))
+    messages.append(AIMessage(content=answer))
+
     return {
         "answer": answer,
         "top_chunks": [],
         "route": "direct",
+        "messages": messages,
     }
 
 
 async def clarify_node(state: GraphState) -> GraphState:
     answer = await clarify_question_tool(state["question"])
+    messages = list(state.get("messages", []))
+    messages.append(AIMessage(content=answer))
+
     return {
         "answer": answer,
         "top_chunks": [],
         "route": "clarify",
+        "messages": messages,
     }
 
 
@@ -95,16 +107,24 @@ async def answer_node(state: GraphState) -> GraphState:
         question=state["question"],
         chunks=state.get("top_chunks", []),
     )
+    messages = list(state.get("messages", []))
+    messages.append(AIMessage(content=answer))
+
     return {
         "answer": answer,
         "route": "answer",
+        "messages": messages,
     }
 
 
 async def fallback_node(state: GraphState) -> GraphState:
+    messages = list(state.get("messages", []))
+    messages.append(AIMessage(content=NO_ANSWER))
+
     return {
         "answer": NO_ANSWER,
         "route": "fallback",
+        "messages": messages,
     }
 
 
@@ -182,19 +202,22 @@ async def run_langgraph_agent(
 
     original_question = question
     memory = None
-    config = None
 
     if session_id:
-        config = {"configurable": {"thread_id": session_id}}
-        snapshot = await graph.aget_state(config)
+        thread_id = session_id
+    else:
+        thread_id = f"tmp-{uuid.uuid4()}"
 
-        if snapshot and snapshot.values:
-            values = snapshot.values
-            memory = {
-                "last_user_message": values.get("original_question") or values.get("question") or "",
-                "last_agent_route": values.get("route"),
-                "last_agent_answer": values.get("answer"),
-            }
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = await graph.aget_state(config)
+
+    if snapshot and snapshot.values:
+        values = snapshot.values
+        memory = {
+            "last_user_message": values.get("original_question") or values.get("question") or "",
+            "last_agent_route": values.get("route"),
+            "last_agent_answer": values.get("answer"),
+        }
 
     question = await resolve_question_with_memory(question, memory)
 
@@ -202,6 +225,7 @@ async def run_langgraph_agent(
         {
             "question": question,
             "original_question": original_question,
+            "messages": [HumanMessage(content=original_question)],
             "records": records,
             "top_k": top_k,
             "min_score": min_score,
