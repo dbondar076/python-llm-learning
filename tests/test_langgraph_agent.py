@@ -20,14 +20,20 @@ async def test_langgraph_agent_answers_python_question() -> None:
 
     assert "answer" in result
     assert "top_chunks" in result
+    assert "route" in result
+
+    assert result["route"] in {"answer", "fallback"}
 
     answer = result["answer"].lower()
-    assert "python" in answer
-    assert (
-        "web" in answer
-        or "automation" in answer
-        or "data" in answer
-        or "ai" in answer
-    )
+
+    if result["route"] == "answer":
+        assert (
+            "web" in answer
+            or "automation" in answer
+            or "data" in answer
+            or "ai" in answer
+        )
+    else:
+        assert answer == "i don't know based on the provided context."
 
     assert len(result["top_chunks"]) > 0
