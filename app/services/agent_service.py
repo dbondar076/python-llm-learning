@@ -75,6 +75,27 @@ def should_use_rag(question: str) -> bool:
     return True
 
 
+def should_force_rag_for_resolved_question(question: str) -> bool:
+    normalized = question.strip().lower()
+
+    technical_markers = {
+        "python",
+        "fastapi",
+        "api",
+        "programming",
+        "language",
+        "ai",
+        "llm",
+    }
+
+    words = set(normalized.split())
+
+    if len(words) >= 2 and words & technical_markers:
+        return True
+
+    return False
+
+
 async def route_question(state: AgentState) -> AgentState:
     question = state["question"]
 
@@ -213,6 +234,13 @@ async def run_rag_agent(
         )
 
     state = await route_question(state)
+
+    if state["route"] == "clarify" and should_force_rag_for_resolved_question(state["question"]):
+        logger.info(
+            "Overriding clarify -> rag for resolved technical question=%r",
+            state["question"],
+        )
+        state["route"] = "rag"
 
     if state["route"] == "direct":
         state["top_chunks"] = []
