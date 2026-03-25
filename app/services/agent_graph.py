@@ -17,6 +17,7 @@ from app.services.rag_tools import (
     search_chunks_tool,
 )
 from app.services.agent_runtime import (
+    build_memory_from_messages,
     resolve_question_with_memory,
     should_force_rag_for_resolved_question,
 )
@@ -202,6 +203,7 @@ async def run_langgraph_agent(
 
     original_question = question
     memory = None
+    last_route = None
 
     if session_id:
         thread_id = session_id
@@ -213,13 +215,15 @@ async def run_langgraph_agent(
 
     if snapshot and snapshot.values:
         values = snapshot.values
-        memory = {
-            "last_user_message": values.get("original_question") or values.get("question") or "",
-            "last_agent_route": values.get("route"),
-            "last_agent_answer": values.get("answer"),
-        }
+        messages = values.get("messages", [])
+        memory = build_memory_from_messages(messages)
+        last_route = values.get("route")
 
-    question = await resolve_question_with_memory(question, memory)
+    question = await resolve_question_with_memory(
+        question=question,
+        memory=memory,
+        last_route=last_route,
+    )
 
     result = await graph.ainvoke(
         {

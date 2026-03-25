@@ -1,5 +1,6 @@
 import logging
 
+from langchain_core.messages import AIMessage, HumanMessage
 from app.services.conversation_memory import save_conversation_state
 from app.services.rag_tools import rewrite_question_with_memory_tool
 
@@ -47,6 +48,7 @@ def build_fallback_rewrite(current_user_message: str) -> str:
 async def resolve_question_with_memory(
     question: str,
     memory: dict | None,
+    last_route: str | None = None,
 ) -> str:
     if not memory:
         logger.info("RESOLVE: no memory")
@@ -54,9 +56,13 @@ async def resolve_question_with_memory(
 
     last_user_message = memory.get("last_user_message")
     last_agent_answer = memory.get("last_agent_answer")
-    last_route = memory.get("last_agent_route")
 
-    logger.info("RESOLVE memory: %s", memory)
+    logger.info(
+        "RESOLVE memory: user=%r ai=%r route=%r",
+        last_user_message,
+        last_agent_answer,
+        last_route,
+    )
 
     if last_route == "clarify" and last_user_message:
         rewritten = await rewrite_question_with_memory_tool(
@@ -118,3 +124,32 @@ def save_memory_if_needed(
             "last_agent_answer": state.get("answer"),
         },
     )
+
+
+# ----------------------------
+# Memorization
+# ----------------------------
+
+def build_memory_from_messages(messages: list) -> dict | None:
+    if not messages:
+        return None
+
+    last_human = None
+    last_ai = None
+
+    for message in reversed(messages):
+        if last_human is None and isinstance(message, HumanMessage):
+            last_human = message
+        elif last_ai is None and isinstance(message, AIMessage):
+            last_ai = message
+
+        if last_human is not None and last_ai is not None:
+            break
+
+    if last_human is None and last_ai is None:
+        return None
+
+    return {
+        "last_user_message": last_human.content if last_human else None,
+        "last_agent_answer": last_ai.content if last_ai else None,
+    }
