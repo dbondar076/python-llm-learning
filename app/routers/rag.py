@@ -12,8 +12,7 @@ from app.services.agent_service import run_rag_agent
 # from app.services.langgraph_rag_agent import run_rag_agent_langgraph
 from app.services.rag_index_service import ChunkEmbeddingRecord
 from app.services.rag_retrieval_service import retrieve_top_chunks
-from app.services.agent_graph import run_langgraph_agent, build_langgraph_response
-
+from app.services.agent_graph import run_langgraph_agent, build_langgraph_response, prepare_langgraph_stream
 
 logger = logging.getLogger(__name__)
 
@@ -208,19 +207,28 @@ async def rag_answer_langgraph_stream(
 ) -> StreamingResponse:
     logger.info("Received /rag/answer/langgraph/stream request: %s", request.question)
 
-    state = await run_langgraph_agent(
-        question=request.question,
-        records=records,
-        session_id=request.session_id,
-        top_k=request.top_k,
-        min_score=request.min_score,
-        title_filter=request.title_filter,
-        doc_id_filter=request.doc_id_filter,
-    )
+    async def event_stream():
+        graph, config, initial_state = await prepare_langgraph_stream(
+            question=request.question,
+            records=records,
+            session_id=request.session_id,
+            top_k=request.top_k,
+            min_score=request.min_score,
+            title_filter=request.title_filter,
+            doc_id_filter=request.doc_id_filter,
+        )
 
-    result = build_langgraph_response(state)
+        async for _ in graph.astream(
+            initial_state,
+            config=config,
+            stream_mode="updates",
+        ):
+            pass
 
-    async def event_stream() -> AsyncGenerator[str, None]:
+        snapshot = await graph.aget_state(config)
+        state = snapshot.values if snapshot and snapshot.values else {}
+        result = build_langgraph_response(state)
+
         yield json.dumps(
             {
                 "type": "meta",

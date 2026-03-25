@@ -275,3 +275,106 @@ def build_langgraph_response(state: GraphState) -> dict:
         "chunks": public_chunks,
         "meta": build_langgraph_meta(state),
     }
+
+
+async def astream_langgraph_agent(
+    question: str,
+    records: list[ChunkEmbeddingRecord],
+    session_id: str | None = None,
+    top_k: int = RAG_TOP_K,
+    min_score: float = RAG_MIN_SCORE,
+    title_filter: str | None = None,
+    doc_id_filter: str | None = None,
+):
+    graph = get_agent_graph()
+
+    original_question = question
+    memory = None
+    last_route = None
+
+    if session_id:
+        thread_id = session_id
+    else:
+        thread_id = f"tmp-{uuid.uuid4()}"
+
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = await graph.aget_state(config)
+
+    if snapshot and snapshot.values:
+        values = snapshot.values
+        messages = values.get("messages", [])
+        memory = build_memory_from_messages(messages)
+        last_route = values.get("route")
+
+    question = await resolve_question_with_memory(
+        question=question,
+        memory=memory,
+        last_route=last_route,
+    )
+
+    initial_state = {
+        "question": question,
+        "original_question": original_question,
+        "messages": [HumanMessage(content=original_question)],
+        "records": records,
+        "top_k": top_k,
+        "min_score": min_score,
+        "title_filter": title_filter,
+        "doc_id_filter": doc_id_filter,
+    }
+
+    async for chunk in graph.astream(
+        initial_state,
+        config=config,
+        stream_mode="updates",
+    ):
+        yield chunk
+
+
+async def prepare_langgraph_stream(
+    question: str,
+    records: list[ChunkEmbeddingRecord],
+    session_id: str | None = None,
+    top_k: int = RAG_TOP_K,
+    min_score: float = RAG_MIN_SCORE,
+    title_filter: str | None = None,
+    doc_id_filter: str | None = None,
+):
+    graph = get_agent_graph()
+
+    original_question = question
+    memory = None
+    last_route = None
+
+    if session_id:
+        thread_id = session_id
+    else:
+        thread_id = f"tmp-{uuid.uuid4()}"
+
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = await graph.aget_state(config)
+
+    if snapshot and snapshot.values:
+        values = snapshot.values
+        messages = values.get("messages", [])
+        memory = build_memory_from_messages(messages)
+        last_route = values.get("route")
+
+    question = await resolve_question_with_memory(
+        question=question,
+        memory=memory,
+        last_route=last_route,
+    )
+
+    initial_state = {
+        "question": question,
+        "original_question": original_question,
+        "messages": [HumanMessage(content=original_question)],
+        "records": records,
+        "top_k": top_k,
+        "min_score": min_score,
+        "title_filter": title_filter,
+        "doc_id_filter": doc_id_filter,
+    }
+
+    return graph, config, initial_state
