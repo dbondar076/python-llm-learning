@@ -263,3 +263,11 @@ def build_langgraph_meta(state: GraphState) -> dict:
         "top_score": top_score,
         "chunk_count": len(top_chunks),
     }
+
+
+def build_langgraph_response(state: GraphState) -> dict:
+    return {
+        "answer": state.get("answer", ""),
+        "chunks": state.get("top_chunks", []),
+        "meta": build_langgraph_meta(state),
+    }

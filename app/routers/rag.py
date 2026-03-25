@@ -11,6 +11,7 @@ from app.services.agent_service import run_rag_agent
 # from app.services.langgraph_rag_agent import run_rag_agent_langgraph
 from app.services.rag_index_service import ChunkEmbeddingRecord
 from app.services.rag_retrieval_service import retrieve_top_chunks
+from app.services.agent_graph import run_langgraph_agent, build_langgraph_response
 
 
 logger = logging.getLogger(__name__)
@@ -94,15 +95,6 @@ async def rag_answer(
         doc_id_filter=request.doc_id_filter,
     )
 
-    # chunks, answer = await run_rag_agent_langgraph(
-    #     question=request.question,
-    #     records=records,
-    #     top_k=request.top_k,
-    #     min_score=request.min_score,
-    #     title_filter=request.title_filter,
-    #     doc_id_filter=request.doc_id_filter,
-    # )
-
     response_chunks = [
         RagChunk(
             doc_id=c["doc_id"],
@@ -118,6 +110,48 @@ async def rag_answer(
         answer=answer,
         chunks=response_chunks,
         meta=meta,
+    )
+
+
+@router.post(
+    "/rag/answer/langgraph",
+    response_model=RagResponse,
+    summary="Answer question with RAG via LangGraph",
+    description="Retrieve relevant chunks and generate a grounded answer using the LangGraph agent.",
+)
+async def rag_answer_langgraph(
+    request: RagAnswerRequest,
+    records: list[ChunkEmbeddingRecord] = Depends(get_rag_records),
+) -> RagResponse:
+    logger.info("Received /rag/answer/langgraph request: %s", request.question)
+
+    state = await run_langgraph_agent(
+        question=request.question,
+        records=records,
+        session_id=request.session_id,
+        top_k=request.top_k,
+        min_score=request.min_score,
+        title_filter=request.title_filter,
+        doc_id_filter=request.doc_id_filter,
+    )
+
+    result = build_langgraph_response(state)
+
+    response_chunks = [
+        RagChunk(
+            doc_id=c["doc_id"],
+            title=c["title"],
+            chunk_id=c["chunk_id"],
+            text=c["text"],
+            score=c["score"],
+        )
+        for c in result["chunks"]
+    ]
+
+    return RagResponse(
+        answer=result["answer"],
+        chunks=response_chunks,
+        meta=result["meta"],
     )
 
 
