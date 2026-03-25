@@ -12,11 +12,18 @@ from app.services.rag_tools import (
     generate_grounded_answer_tool,
     route_question_with_llm,
     search_chunks_tool,
+    rewrite_question_with_memory_tool,
+)
+from app.services.conversation_memory import (
+    get_conversation_state,
+    save_conversation_state,
 )
 
 
 class GraphState(TypedDict, total=False):
     question: str
+    original_question: str
+    initial_route: str
     route: str
     top_chunks: list[ScoredChunk]
     answer: str
@@ -28,8 +35,17 @@ class GraphState(TypedDict, total=False):
 
 
 async def route_node(state: GraphState) -> GraphState:
-    route = await route_question_with_llm(state["question"])
-    return {"route": route}
+    question = state["question"]
+    route = await route_question_with_llm(question)
+    initial_route = route
+
+    if route == "clarify" and should_force_rag_for_resolved_question(question):
+        route = "rag"
+
+    return {
+        "route": route,
+        "initial_route": initial_route,
+    }
 
 
 async def direct_node(state: GraphState) -> GraphState:
@@ -135,6 +151,7 @@ def build_agent_graph():
 async def run_langgraph_agent(
     question: str,
     records: list[ChunkEmbeddingRecord],
+    session_id: str | None = None,
     top_k: int = RAG_TOP_K,
     min_score: float = RAG_MIN_SCORE,
     title_filter: str | None = None,
@@ -142,9 +159,18 @@ async def run_langgraph_agent(
 ) -> GraphState:
     graph = build_agent_graph()
 
+    original_question = question
+    memory = None
+
+    if session_id:
+        memory = get_conversation_state(session_id)
+
+    question = await resolve_question_with_memory(question, memory)
+
     result = await graph.ainvoke(
         {
             "question": question,
+            "original_question": original_question,
             "records": records,
             "top_k": top_k,
             "min_score": min_score,
@@ -153,4 +179,65 @@ async def run_langgraph_agent(
         }
     )
 
+    save_memory_if_needed(session_id, original_question, result)
     return result
+
+
+def should_force_rag_for_resolved_question(question: str) -> bool:
+    normalized = question.strip().lower()
+
+    technical_markers = {
+        "python",
+        "fastapi",
+        "api",
+        "programming",
+        "language",
+        "ai",
+        "llm",
+    }
+
+    words = set(normalized.split())
+
+    if len(words) >= 2 and words & technical_markers:
+        return True
+
+    return False
+
+
+async def resolve_question_with_memory(
+    question: str,
+    memory: dict | None,
+) -> str:
+    if not memory:
+        return question
+
+    last_route = memory.get("last_agent_route")
+    last_user_message = memory.get("last_user_message")
+    last_agent_answer = memory.get("last_agent_answer")
+
+    if last_route == "clarify" and last_user_message:
+        return await rewrite_question_with_memory_tool(
+            previous_user_message=last_user_message,
+            previous_agent_answer=last_agent_answer,
+            current_user_message=question,
+        )
+
+    return question
+
+
+def save_memory_if_needed(
+    session_id: str | None,
+    question: str,
+    result: GraphState,
+) -> None:
+    if not session_id:
+        return
+
+    save_conversation_state(
+        session_id,
+        {
+            "last_user_message": question,
+            "last_agent_route": result.get("route"),
+            "last_agent_answer": result.get("answer"),
+        },
+    )
