@@ -12,11 +12,14 @@ from app.services.rag_tools import (
     generate_grounded_answer_tool,
     route_question_with_llm,
     search_chunks_tool,
-    rewrite_question_with_memory_tool,
 )
 from app.services.conversation_memory import (
     get_conversation_state,
-    save_conversation_state,
+)
+from app.services.agent_runtime import (
+    resolve_question_with_memory,
+    should_force_rag_for_resolved_question,
+    save_memory_if_needed,
 )
 
 
@@ -45,6 +48,8 @@ async def route_node(state: GraphState) -> GraphState:
     return {
         "route": route,
         "initial_route": initial_route,
+        "question": state["question"],
+        "original_question": state.get("original_question"),
     }
 
 
@@ -189,66 +194,6 @@ async def run_langgraph_agent(
 
     save_memory_if_needed(session_id, original_question, result)
     return result
-
-
-def should_force_rag_for_resolved_question(question: str) -> bool:
-    normalized = question.strip().lower()
-
-    technical_markers = {
-        "python",
-        "fastapi",
-        "api",
-        "programming",
-        "language",
-        "ai",
-        "llm",
-    }
-
-    words = set(normalized.split())
-
-    if len(words) >= 2 and words & technical_markers:
-        return True
-
-    return False
-
-
-async def resolve_question_with_memory(
-    question: str,
-    memory: dict | None,
-) -> str:
-    if not memory:
-        return question
-
-    last_route = memory.get("last_agent_route")
-    last_user_message = memory.get("last_user_message")
-    last_agent_answer = memory.get("last_agent_answer")
-
-    if last_route == "clarify" and last_user_message:
-        return await rewrite_question_with_memory_tool(
-            previous_user_message=last_user_message,
-            previous_agent_answer=last_agent_answer,
-            current_user_message=question,
-        )
-
-    return question
-
-
-def save_memory_if_needed(
-    session_id: str | None,
-    question: str,
-    result: GraphState,
-) -> None:
-    if not session_id:
-        return
-
-    save_conversation_state(
-        session_id,
-        {
-            "last_user_message": question,
-            "last_agent_route": result.get("route"),
-            "last_agent_answer": result.get("answer"),
-        },
-    )
 
 
 def build_langgraph_meta(state: GraphState) -> dict:

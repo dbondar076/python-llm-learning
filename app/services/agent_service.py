@@ -11,11 +11,14 @@ from app.services.rag_tools import (
     direct_answer_tool,
     clarify_question_tool,
     route_question_with_llm,
-    rewrite_question_with_memory_tool,
 )
 from app.services.conversation_memory import (
     get_conversation_state,
-    save_conversation_state,
+)
+from app.services.agent_runtime import (
+    resolve_question_with_memory,
+    should_force_rag_for_resolved_question,
+    save_memory_if_needed,
 )
 
 logger = logging.getLogger(__name__)
@@ -28,38 +31,6 @@ class AgentState(TypedDict, total=False):
     initial_route: str
     top_chunks: list[ScoredChunk]
     answer: str
-
-
-async def resolve_question_with_memory(
-    question: str,
-    memory: dict | None,
-) -> str:
-    if not memory:
-        print("RESOLVE: no memory")
-        return question
-
-    last_route = memory.get("last_agent_route")
-    last_user_message = memory.get("last_user_message")
-    last_agent_answer = memory.get("last_agent_answer")
-
-    print("RESOLVE memory:", memory)
-
-    if last_route == "clarify" and last_user_message:
-        rewritten = await rewrite_question_with_memory_tool(
-            previous_user_message=last_user_message,
-            current_user_message=question,
-            previous_agent_answer=last_agent_answer,
-        )
-        logger.info("Rewrite candidate: %r", rewritten)
-
-        if not rewritten or is_bad_rewrite(rewritten):
-            fallback = build_fallback_rewrite(question)
-            logger.info("Rejected bad rewrite, fallback rewrite=%r", fallback)
-            return fallback
-
-        return rewritten
-
-    return question
 
 
 def should_use_rag(question: str) -> bool:
@@ -81,27 +52,6 @@ def should_use_rag(question: str) -> bool:
         return False
 
     return True
-
-
-def should_force_rag_for_resolved_question(question: str) -> bool:
-    normalized = question.strip().lower()
-
-    technical_markers = {
-        "python",
-        "fastapi",
-        "api",
-        "programming",
-        "language",
-        "ai",
-        "llm",
-    }
-
-    words = set(normalized.split())
-
-    if len(words) >= 2 and words & technical_markers:
-        return True
-
-    return False
 
 
 async def route_question(state: AgentState) -> AgentState:
@@ -185,24 +135,6 @@ async def fallback_no_answer(state: AgentState) -> AgentState:
     return state
 
 
-def save_memory_if_needed(
-    session_id: str | None,
-    question: str,
-    state: AgentState,
-) -> None:
-    if not session_id:
-        return
-
-    save_conversation_state(
-        session_id,
-        {
-            "last_user_message": question,
-            "last_agent_route": state.get("route"),
-            "last_agent_answer": state.get("answer"),
-        },
-    )
-
-
 def build_agent_meta(state: AgentState) -> dict:
     top_chunks = state.get("top_chunks", [])
     top_score = top_chunks[0]["score"] if top_chunks else None
@@ -215,38 +147,6 @@ def build_agent_meta(state: AgentState) -> dict:
         "top_score": top_score,
         "chunk_count": len(top_chunks),
     }
-
-
-def is_bad_rewrite(text: str) -> bool:
-    lowered = text.lower().strip()
-
-    bad_patterns = [
-        "clarify",
-        "refers to",
-        "refer to",
-        "reference to",
-        "previous message",
-        "user message",
-        "current user message",
-        "when the user",
-        "the user replies",
-        "the user replied",
-        "meaning of",
-        "in the context of",
-        "what does",
-        "what do you mean",
-    ]
-
-    return any(pattern in lowered for pattern in bad_patterns)
-
-
-def build_fallback_rewrite(current_user_message: str) -> str:
-    text = current_user_message.strip()
-
-    if not text:
-        return current_user_message
-
-    return f"Information about {text}"
 
 
 async def run_rag_agent(
@@ -310,7 +210,7 @@ async def run_rag_agent(
             len(state.get("top_chunks", [])),
         )
 
-        save_memory_if_needed(session_id, question, state)
+        save_memory_if_needed(session_id, original_question, state)
         return state["top_chunks"], state["answer"], build_agent_meta(state)
 
     if state["route"] == "clarify":
@@ -324,7 +224,7 @@ async def run_rag_agent(
             len(state.get("top_chunks", [])),
         )
 
-        save_memory_if_needed(session_id, question, state)
+        save_memory_if_needed(session_id, original_question, state)
         return state["top_chunks"], state["answer"], build_agent_meta(state)
 
     state = await retrieve_context(
@@ -352,5 +252,5 @@ async def run_rag_agent(
         len(state.get("top_chunks", [])),
     )
 
-    save_memory_if_needed(session_id, question, state)
+    save_memory_if_needed(session_id, original_question, state)
     return state.get("top_chunks", []), state["answer"], build_agent_meta(state)
