@@ -11,6 +11,16 @@ logger = logging.getLogger(__name__)
 # Rewrite guardrails
 # ----------------------------
 
+def is_too_generic_rewrite(text: str) -> bool:
+    text = text.lower().strip()
+
+    return (
+        text.startswith("information about")
+        or text.startswith("details about")
+        or len(text.split()) < 2
+    )
+
+
 def is_bad_rewrite(text: str) -> bool:
     lowered = text.lower().strip()
 
@@ -38,7 +48,24 @@ def build_fallback_rewrite(current_user_message: str) -> str:
     text = current_user_message.strip()
     if not text:
         return current_user_message
-    return f"Information about {text}"
+
+    lowered = text.lower()
+
+    technical_aliases = {
+        "python": "Python programming language",
+        "fastapi": "FastAPI Python framework",
+        "api": "API development",
+        "llm": "large language models",
+        "ai": "artificial intelligence",
+    }
+
+    if lowered in technical_aliases:
+        return technical_aliases[lowered]
+
+    if len(text.split()) == 1:
+        return f"{text} technical topic"
+
+    return text
 
 
 # ----------------------------
@@ -73,7 +100,11 @@ async def resolve_question_with_memory(
 
         logger.info("Rewrite candidate: %r", rewritten)
 
-        if not rewritten or is_bad_rewrite(rewritten):
+        if (
+            not rewritten
+            or is_bad_rewrite(rewritten)
+            or is_too_generic_rewrite(rewritten)
+        ):
             fallback = build_fallback_rewrite(question)
             logger.info("Rejected rewrite → fallback=%r", fallback)
             return fallback

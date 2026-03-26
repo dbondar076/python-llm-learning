@@ -1,7 +1,6 @@
 import pytest
 
-from app.services.agent_graph import build_langgraph_meta
-
+from app.agents.rag.response import build_langgraph_meta
 
 pytestmark = pytest.mark.fast
 

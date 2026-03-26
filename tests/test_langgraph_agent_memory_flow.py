@@ -1,7 +1,7 @@
 import pytest
 from openai import APIConnectionError
 
-from app.services.agent_graph import run_langgraph_agent
+from app.agents.rag.runtime import run_langgraph_agent
 from app.services.conversation_memory import reset_memory_store
 from app.services.llm_service import reset_runtime_state
 from app.services.rag_index_service import load_chunk_embeddings

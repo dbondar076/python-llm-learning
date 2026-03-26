@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.agent_graph import run_langgraph_agent
+from app.agents.rag.runtime import run_langgraph_agent
 from app.services.rag_index_service import load_chunk_embeddings
 
 
