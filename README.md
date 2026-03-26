@@ -22,16 +22,72 @@ A production-style learning project that demonstrates how to build an LLM-powere
   - TTL caching
   - structured logging
   - request ID tracing
-- RAG
+- RAG (Retrieval-Augmented Generation)
   - `/rag/search` — semantic chunk retrieval
-  - `/rag/answer` — grounded answers based on retrieved chunks
-- support for:
+  - `/rag/answer` — manual RAG agent
+  - `/rag/answer/langgraph` — LangGraph-based agent
+  - `/rag/answer/langgraph/stream` — streaming responses
+- Agent capabilities
+  - dynamic routing: `direct` / `clarify` / `rag`
+  - conversation-aware question rewriting
+  - memory across requests (via LangGraph checkpointer)
+  - fallback handling when context is insufficient
+- Streaming
+  - incremental token streaming via API
+  - structured events: `meta`, `chunk`, `done`
+- Support for:
   - `top_k`
   - `min_score`
   - `title_filter`
   - `doc_id_filter`
-- chunk merging experiments
+- Chunk merging experiments
 - RAG API and dependency override tests
+
+
+## Agent Architecture
+
+The project includes two RAG agent implementations:
+
+### 1. Manual Agent
+Custom orchestration with explicit control over:
+- routing
+- memory handling
+- retrieval and answer generation
+
+### 2. LangGraph Agent
+A production-style graph-based agent using LangGraph:
+- nodes (route, retrieve, answer, fallback)
+- conditional edges
+- state management
+- built-in checkpoint-based memory
+
+### Flow
+User question
+- memory-aware rewrite
+- route decision
+  - direct → answer
+  - clarify → clarification
+  - rag → retrieval → answer / fallback
+
+### Memory
+
+- conversation state stored via LangGraph checkpointer
+- messages tracked using:
+  - `HumanMessage`
+  - `AIMessage`
+- previous context used for:
+  - resolving ambiguous queries
+  - improving retrieval quality
+
+### Streaming
+
+LangGraph agent supports streaming responses:
+
+- emits:
+  - `meta` (routing + retrieval info)
+  - `chunk` (partial answer)
+  - `done`
+- implemented via `graph.astream(...)`
 
 
 ## Prompt Engineering & Evaluation
@@ -55,6 +111,14 @@ app/
   dependencies.py
   error_handlers.py
   request_context.py
+  agents/
+    rag/
+      state.py
+      nodes.py
+      edges.py
+      graph.py
+      runtime.py
+      response.py
   routers/
     analysis.py
     rag.py
@@ -69,7 +133,6 @@ app/
     rag_answer_service.py
     rag_index_service.py
     rag_search_service.py
-
 tests/
   test_api.py
   test_rag_api.py
@@ -199,7 +262,8 @@ python experiments/lesson48.py
 - OpenAI API
 - asyncio
 - pytest
-
+- LangGraph
+- LangChain Core (messages)
 
 ## Key Concepts Covered
 
@@ -212,9 +276,22 @@ python experiments/lesson48.py
 - LLM-as-judge
 - Prompt experimentation
 - Embeddings
-- Antic search
+- Semantic search
 - Retrieval-Augmented Generation (RAG)
+- Agent-based architectures
+- Graph-based orchestration (LangGraph)
+- Conversational memory
+- Streaming LLM responses
 
+## Manual vs LangGraph Agent
+
+| Feature        | Manual Agent | LangGraph Agent |
+|----------------|-------------|-----------------|
+| Control        | High        | Medium          |
+| Abstraction    | Low         | High            |
+| Memory         | Custom      | Built-in        |
+| Streaming      | Manual      | Native          |
+| Scalability    | Medium      | High            |
 
 ## Roadmap
 
