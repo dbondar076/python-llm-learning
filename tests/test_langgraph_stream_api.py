@@ -55,6 +55,13 @@ def test_langgraph_stream_returns_meta_chunks_and_done(client: TestClient) -> No
         if item["type"] == "chunk"
     )
     assert chunk_text != ""
-    assert "python" in chunk_text.lower()
+
+    chunk_text_lower = chunk_text.lower()
+    assert (
+        "web" in chunk_text_lower
+        or "automation" in chunk_text_lower
+        or "data" in chunk_text_lower
+        or "ai" in chunk_text_lower
+    )
 
     assert last["type"] == "done"

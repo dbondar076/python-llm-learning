@@ -1,4 +1,5 @@
 import logging
+from langchain_core.messages import BaseMessage, HumanMessage
 from app.settings import RAG_TOP_K
 from app.services.llm_service import run_text_prompt_with_retry_async
 from app.services.rag_answer_service import (
@@ -38,12 +39,15 @@ async def search_chunks_tool(
 # ----------------------------
 
 async def generate_grounded_answer_tool(
-    question: str,
+    messages: list[BaseMessage],
     chunks: list[ScoredChunk],
 ) -> str:
     merged_chunks = merge_adjacent_chunks(chunks)
     context = build_context(merged_chunks)
+
+    question = get_last_human_message_text(messages)
     prompt = build_rag_prompt(question, context)
+
     return await run_text_prompt_with_retry_async(prompt)
 
 
@@ -137,3 +141,15 @@ async def rewrite_question_with_memory_tool(
     )
 
     return result
+
+
+# ----------------------------
+# HELPERS
+# ----------------------------
+
+def get_last_human_message_text(messages: list[BaseMessage]) -> str:
+    for message in reversed(messages):
+        if isinstance(message, HumanMessage):
+            return message.content
+
+    return ""

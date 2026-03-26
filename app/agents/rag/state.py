@@ -1,10 +1,9 @@
-from typing import TypedDict
-
+from langgraph.graph import MessagesState
 from app.services.rag_index_service import ChunkEmbeddingRecord
 from app.services.rag_retrieval_service import ScoredChunk
 
 
-class GraphState(TypedDict, total=False):
+class GraphState(MessagesState):
     question: str
     original_question: str
     messages: list

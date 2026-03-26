@@ -69,7 +69,7 @@ async def retrieve_node(state: GraphState) -> GraphState:
 
 async def answer_node(state: GraphState) -> GraphState:
     answer = await generate_grounded_answer_tool(
-        question=state["question"],
+        messages=state.get("messages", []),
         chunks=state.get("top_chunks", []),
     )
     messages = list(state.get("messages", []))
