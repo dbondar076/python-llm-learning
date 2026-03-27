@@ -19,6 +19,32 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["RAG"])
 
 
+def build_rag_chunks(chunks: list[dict]) -> list[RagChunk]:
+    return [
+        RagChunk(
+            doc_id=c["doc_id"],
+            title=c["title"],
+            chunk_id=c["chunk_id"],
+            text=c["text"],
+            score=c["score"],
+        )
+        for c in chunks
+    ]
+
+
+def serialize_chunks(chunks: list[dict]) -> list[dict]:
+    return [
+        {
+            "doc_id": c["doc_id"],
+            "title": c["title"],
+            "chunk_id": c["chunk_id"],
+            "text": c["text"],
+            "score": c["score"],
+        }
+        for c in chunks
+    ]
+
+
 async def stream_text_chunks(
     text: str,
     chunk_size: int = 20,
@@ -53,16 +79,7 @@ async def rag_search(
         doc_id_filter=request.doc_id_filter,
     )
 
-    response_chunks = [
-        RagChunk(
-            doc_id=c["doc_id"],
-            title=c["title"],
-            chunk_id=c["chunk_id"],
-            text=c["text"],
-            score=c["score"],
-        )
-        for c in chunks
-    ]
+    response_chunks = build_rag_chunks(chunks)
 
     return RagSearchResponse(chunks=response_chunks)
 
@@ -89,16 +106,7 @@ async def rag_answer(
         doc_id_filter=request.doc_id_filter,
     )
 
-    response_chunks = [
-        RagChunk(
-            doc_id=c["doc_id"],
-            title=c["title"],
-            chunk_id=c["chunk_id"],
-            text=c["text"],
-            score=c["score"],
-        )
-        for c in chunks
-    ]
+    response_chunks = build_rag_chunks(chunks)
 
     return RagResponse(
         answer=answer,
@@ -131,16 +139,7 @@ async def rag_answer_langgraph(
 
     result = build_langgraph_response(state)
 
-    response_chunks = [
-        RagChunk(
-            doc_id=c["doc_id"],
-            title=c["title"],
-            chunk_id=c["chunk_id"],
-            text=c["text"],
-            score=c["score"],
-        )
-        for c in result["chunks"]
-    ]
+    response_chunks = build_rag_chunks(result["chunks"])
 
     return RagResponse(
         answer=result["answer"],
@@ -160,7 +159,7 @@ async def rag_answer_stream(
 ) -> StreamingResponse:
     logger.info("Received /rag/answer/stream request: %s", request.question)
 
-    chunks, answer, _ = await run_rag_agent( #run_rag_agent_langgraph(
+    chunks, answer, meta = await run_rag_agent(
         question=request.question,
         records=records,
         session_id=request.session_id,
@@ -174,21 +173,15 @@ async def rag_answer_stream(
         yield json.dumps(
             {
                 "type": "meta",
-                "chunks": [
-                    {
-                        "doc_id": c["doc_id"],
-                        "title": c["title"],
-                        "chunk_id": c["chunk_id"],
-                        "text": c["text"],
-                        "score": c["score"],
-                    }
-                    for c in chunks
-                ],
+                "meta": meta,
+                "chunks": serialize_chunks(chunks),
             }
         ) + "\n"
 
         async for item in stream_text_chunks(answer):
             yield item
+
+        yield json.dumps({"type": "done"}) + "\n"
 
     return StreamingResponse(
         event_stream(),
