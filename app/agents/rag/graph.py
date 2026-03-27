@@ -55,3 +55,9 @@ def get_agent_graph():
     if _GRAPH is None:
         _GRAPH = build_agent_graph()
     return _GRAPH
+
+
+def reset_langgraph_runtime_state() -> None:
+    global _GRAPH, _CHECKPOINTER
+    _CHECKPOINTER = InMemorySaver()
+    _GRAPH = None
