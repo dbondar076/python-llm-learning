@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.agent_service import decide_after_retrieval
+from app.services.manual_agent_service import decide_after_retrieval
 
 
 pytestmark = pytest.mark.fast

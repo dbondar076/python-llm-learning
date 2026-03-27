@@ -1,7 +1,6 @@
 import logging
 
 from langchain_core.messages import AIMessage, HumanMessage
-from app.services.conversation_memory import save_conversation_state
 from app.services.rag_tools import rewrite_question_with_memory_tool
 
 logger = logging.getLogger(__name__)
@@ -133,28 +132,6 @@ def should_force_rag_for_resolved_question(question: str) -> bool:
     ]
 
     return any(k in normalized for k in keywords)
-
-
-# ----------------------------
-# Memory saving
-# ----------------------------
-
-def save_memory_if_needed(
-    session_id: str | None,
-    original_question: str,
-    state: dict,
-) -> None:
-    if not session_id:
-        return
-
-    save_conversation_state(
-        session_id,
-        {
-            "last_user_message": original_question,
-            "last_agent_route": state.get("route"),
-            "last_agent_answer": state.get("answer"),
-        },
-    )
 
 
 # ----------------------------

@@ -9,8 +9,7 @@ from app.agents.rag.response import build_langgraph_response
 from app.agents.rag.runtime import run_langgraph_agent, prepare_langgraph_stream
 from app.dependencies import get_rag_records
 from app.models import RagAnswerRequest, RagChunk, RagResponse, RagSearchRequest, RagSearchResponse
-from app.services.agent_service import run_rag_agent
-# from app.services.langgraph_rag_agent import run_rag_agent_langgraph
+from app.services.manual_agent_service import run_rag_agent
 from app.services.rag_index_service import ChunkEmbeddingRecord
 from app.services.rag_retrieval_service import retrieve_top_chunks
 
@@ -161,7 +160,7 @@ async def rag_answer_stream(
 ) -> StreamingResponse:
     logger.info("Received /rag/answer/stream request: %s", request.question)
 
-    chunks, answer = await run_rag_agent( #run_rag_agent_langgraph(
+    chunks, answer, _ = await run_rag_agent( #run_rag_agent_langgraph(
         question=request.question,
         records=records,
         session_id=request.session_id,

@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.agent_service import route_question
+from app.services.manual_agent_service import route_question
 
 
 pytestmark = pytest.mark.fast
@@ -13,7 +13,7 @@ async def test_route_question_uses_llm_router_direct(monkeypatch: pytest.MonkeyP
         return "direct"
 
     monkeypatch.setattr(
-        "app.services.agent_service.route_question_with_llm",
+        "app.services.manual_agent_service.route_question_with_llm",
         fake_route_question_with_llm,
     )
 
@@ -31,7 +31,7 @@ async def test_route_question_uses_llm_router_rag(monkeypatch: pytest.MonkeyPatc
         return "rag"
 
     monkeypatch.setattr(
-        "app.services.agent_service.route_question_with_llm",
+        "app.services.manual_agent_service.route_question_with_llm",
         fake_route_question_with_llm,
     )
 
@@ -50,7 +50,7 @@ async def test_route_question_falls_back_to_heuristic_direct(
         raise RuntimeError("router failed")
 
     monkeypatch.setattr(
-        "app.services.agent_service.route_question_with_llm",
+        "app.services.manual_agent_service.route_question_with_llm",
         fake_route_question_with_llm,
     )
 
@@ -69,7 +69,7 @@ async def test_route_question_falls_back_to_heuristic_rag(
         raise RuntimeError("router failed")
 
     monkeypatch.setattr(
-        "app.services.agent_service.route_question_with_llm",
+        "app.services.manual_agent_service.route_question_with_llm",
         fake_route_question_with_llm,
     )
 
@@ -89,7 +89,7 @@ async def test_route_question_uses_llm_router_clarify(
         return "clarify"
 
     monkeypatch.setattr(
-        "app.services.agent_service.route_question_with_llm",
+        "app.services.manual_agent_service.route_question_with_llm",
         fake_route_question_with_llm,
     )
 

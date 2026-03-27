@@ -1,24 +1,26 @@
 import logging
 from typing import TypedDict
 
+from langchain_core.messages import AIMessage, HumanMessage
+
 from app.settings import RAG_MIN_SCORE, RAG_TOP_K
+from app.services.agent_runtime import (
+    resolve_question_with_memory,
+    should_force_rag_for_resolved_question,
+)
+from app.services.conversation_memory import (
+    get_conversation_state,
+    save_conversation_state,
+)
 from app.services.rag_answer_service import NO_ANSWER
 from app.services.rag_index_service import ChunkEmbeddingRecord
 from app.services.rag_retrieval_service import ScoredChunk, should_answer
 from app.services.rag_tools import (
-    search_chunks_tool,
-    generate_grounded_answer_tool,
-    direct_answer_tool,
     clarify_question_tool,
+    direct_answer_tool,
+    generate_grounded_answer_tool,
     route_question_with_llm,
-)
-from app.services.conversation_memory import (
-    get_conversation_state,
-)
-from app.services.agent_runtime import (
-    resolve_question_with_memory,
-    should_force_rag_for_resolved_question,
-    save_memory_if_needed,
+    search_chunks_tool,
 )
 
 logger = logging.getLogger(__name__)
@@ -27,6 +29,7 @@ logger = logging.getLogger(__name__)
 class AgentState(TypedDict, total=False):
     question: str
     original_question: str
+    messages: list
     route: str
     initial_route: str
     top_chunks: list[ScoredChunk]
@@ -122,16 +125,26 @@ async def generate_answer_node(state: AgentState) -> AgentState:
     top_chunks = state.get("top_chunks", [])
 
     answer = await generate_grounded_answer_tool(
-        question=state["question"],
+        messages=state.get("messages", []),
         chunks=top_chunks,
     )
 
     state["answer"] = answer
+
+    messages = list(state.get("messages", []))
+    messages.append(AIMessage(content=answer))
+    state["messages"] = messages
+
     return state
 
 
 async def fallback_no_answer(state: AgentState) -> AgentState:
     state["answer"] = NO_ANSWER
+
+    messages = list(state.get("messages", []))
+    messages.append(AIMessage(content=NO_ANSWER))
+    state["messages"] = messages
+
     return state
 
 
@@ -149,6 +162,24 @@ def build_agent_meta(state: AgentState) -> dict:
     }
 
 
+def save_memory_if_needed(
+    session_id: str | None,
+    original_question: str,
+    state: dict,
+) -> None:
+    if not session_id:
+        return
+
+    save_conversation_state(
+        session_id,
+        {
+            "last_user_message": original_question,
+            "last_agent_route": state.get("route"),
+            "last_agent_answer": state.get("answer"),
+        },
+    )
+
+
 async def run_rag_agent(
     question: str,
     records: list[ChunkEmbeddingRecord],
@@ -161,18 +192,25 @@ async def run_rag_agent(
     state: AgentState = {
         "question": question,
         "original_question": question,
+        "messages": [HumanMessage(content=question)],
     }
 
     logger.info("Agent started for question=%r session_id=%r", question, session_id)
 
     memory = None
+    last_route = None
     original_question = question
 
     if session_id:
         memory = get_conversation_state(session_id)
         logger.info("Loaded memory: %s", memory)
+        last_route = memory.get("last_agent_route") if memory else None
 
-    question = await resolve_question_with_memory(question, memory)
+    question = await resolve_question_with_memory(
+        question=question,
+        memory=memory,
+        last_route=last_route,
+    )
     state["question"] = question
 
     logger.info(
@@ -189,10 +227,11 @@ async def run_rag_agent(
         )
 
     state = await route_question(state)
-
     state["initial_route"] = state["route"]
 
-    if state["route"] == "clarify" and should_force_rag_for_resolved_question(state["question"]):
+    if state["route"] == "clarify" and should_force_rag_for_resolved_question(
+        state["question"]
+    ):
         logger.info(
             "Overriding clarify -> rag for resolved technical question=%r",
             state["question"],
@@ -202,6 +241,10 @@ async def run_rag_agent(
     if state["route"] == "direct":
         state["top_chunks"] = []
         state["answer"] = await direct_answer_tool(state["question"])
+
+        messages = list(state.get("messages", []))
+        messages.append(AIMessage(content=state["answer"]))
+        state["messages"] = messages
 
         logger.info(
             "Agent finished route=%s answer_len=%s chunk_count=%s",
@@ -216,6 +259,10 @@ async def run_rag_agent(
     if state["route"] == "clarify":
         state["top_chunks"] = []
         state["answer"] = await clarify_question_tool(state["question"])
+
+        messages = list(state.get("messages", []))
+        messages.append(AIMessage(content=state["answer"]))
+        state["messages"] = messages
 
         logger.info(
             "Agent finished route=%s answer_len=%s chunk_count=%s",
