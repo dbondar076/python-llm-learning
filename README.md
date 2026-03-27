@@ -25,8 +25,9 @@ A production-style learning project that demonstrates how to build an LLM-powere
 - RAG (Retrieval-Augmented Generation)
   - `/rag/search` — semantic chunk retrieval
   - `/rag/answer` — manual RAG agent
+  - `/rag/answer/stream` — streaming responses
   - `/rag/answer/langgraph` — LangGraph-based agent
-  - `/rag/answer/langgraph/stream` — streaming responses
+  - `/rag/answer/langgraph/stream` — LangGraph streaming
 - Agent capabilities
   - dynamic routing: `direct` / `clarify` / `rag`
   - conversation-aware question rewriting
@@ -63,30 +64,28 @@ A production-style graph-based agent using LangGraph:
 
 ### Flow
 User question
-- memory-aware rewrite
-- route decision
+- memory-aware rewrite (if needed)
+- route decision (LLM + heuristics)
   - direct → answer
   - clarify → clarification
   - rag → retrieval → answer / fallback
 
 ### Memory
 
-- conversation state stored via LangGraph checkpointer
+- conversation state stored via LangGraph checkpointer (thread_id-based sessions)
 - messages tracked using:
   - `HumanMessage`
   - `AIMessage`
 - previous context used for:
   - resolving ambiguous queries
   - improving retrieval quality
+  - disambiguating follow-up questions ("what about that?")
 
 ### Streaming
 
 LangGraph agent supports streaming responses:
 
-- emits:
-  - `meta` (routing + retrieval info)
-  - `chunk` (partial answer)
-  - `done`
+- transport: NDJSON (newline-delimited JSON)
 - implemented via `graph.astream(...)`
 
 
@@ -122,17 +121,25 @@ app/
   routers/
     analysis.py
     rag.py
+    health.py
   services/
+    agent_runtime.py
     analyzer.py
+    conversation_memory.py
     llm_service.py
     llm_prompts.py
     llm_parsers.py
     llm_cache.py
     llm_errors.py
     llm_schemas.py
+    logging_config.py
+    manual_agent_service.py
+    openai_client.py
+    prompt_registry.py
     rag_answer_service.py
     rag_index_service.py
-    rag_search_service.py
+    rag_retrieval_service.py
+    rag_tools.py
 tests/
   test_api.py
   test_rag_api.py
@@ -263,7 +270,7 @@ python experiments/lesson48.py
 - asyncio
 - pytest
 - LangGraph
-- LangChain Core (messages)
+- LangChain Core (messages abstraction)
 
 ## Key Concepts Covered
 
@@ -285,13 +292,14 @@ python experiments/lesson48.py
 
 ## Manual vs LangGraph Agent
 
-| Feature        | Manual Agent | LangGraph Agent |
-|----------------|-------------|-----------------|
-| Control        | High        | Medium          |
-| Abstraction    | Low         | High            |
-| Memory         | Custom      | Built-in        |
-| Streaming      | Manual      | Native          |
-| Scalability    | Medium      | High            |
+| Feature         | Manual Agent | LangGraph Agent |
+|-----------------|-------------|-----------------|
+| Control         | High        | Medium          |
+| Abstraction     | Low         | High            |
+| Memory          | Custom      | Built-in        |
+| Streaming       | Manual      | Native          |
+| Scalability     | Medium      | High            |
+| Debuggability   | High        | Medium          |
 
 ## Roadmap
 
@@ -300,6 +308,18 @@ python experiments/lesson48.py
 - Improved chunking strategies
 - Optional vector database integration
 
+## Why This Project
+
+This project demonstrates how to evolve from a simple LLM integration to a production-style agent system:
+
+- start with prompt-based APIs
+- add reliability (retry, timeout, caching)
+- introduce evaluation workflows
+- build RAG pipelines
+- evolve into agent-based architectures
+- migrate to graph-based orchestration (LangGraph)
+
+It is designed as a learning path for backend engineers entering the LLM space.
 
 ## License
 
