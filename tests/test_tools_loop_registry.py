@@ -66,11 +66,19 @@ async def test_decide_next_tool_prompt_uses_registry_tools(
     assert result.tool == "finish"
     assert result.arguments == {}
     assert result.reason == "Enough information"
+
     assert "- calculator ->" in captured["prompt"]
     assert "- search_chunks ->" in captured["prompt"]
     assert "- list_docs ->" in captured["prompt"]
     assert "- finish" in captured["prompt"]
+
     assert "Use for arithmetic calculations" in captured["prompt"]
+
+    assert '"tool": "calculator"' in captured["prompt"]
+    assert '"expression": "2 + 2 * 5"' in captured["prompt"]
+    assert '"tool": "search_chunks"' in captured["prompt"]
+    assert '"tool": "list_docs"' in captured["prompt"]
+    assert '"tool": "finish"' in captured["prompt"]
 
 
 @pytest.mark.asyncio

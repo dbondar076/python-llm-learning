@@ -115,6 +115,28 @@ def build_tools_description_text() -> str:
     return "\n".join(lines)
 
 
+def build_tools_examples_text() -> str:
+    parts = []
+
+    for name, config in TOOLS_SPECS.items():
+        example = {
+            "tool": name,
+            "arguments": config.get("arguments_example", {}),
+            "reason": "short reason",
+        }
+
+        parts.append(json.dumps(example, ensure_ascii=False))
+
+    finish_example = {
+        "tool": "finish",
+        "arguments": {},
+        "reason": "short reason",
+    }
+    parts.append(json.dumps(finish_example, ensure_ascii=False))
+
+    return "\n".join(parts)
+
+
 async def decide_next_tool_with_llm(
     question: str,
     steps_taken: int,
@@ -122,6 +144,7 @@ async def decide_next_tool_with_llm(
     previous_tool_output: str | None,
 ) -> ToolDecision:
     tools_description = build_tools_description_text()
+    tools_examples = build_tools_examples_text()
     tool_names = list(TOOLS_SPECS.keys())
 
     allowed_routes = tool_names + ["finish"]
@@ -136,6 +159,8 @@ async def decide_next_tool_with_llm(
         f"{allowed_routes_text}\n\n"
         "Available tools:\n"
         f"{tools_description}\n\n"
+        "Examples of valid outputs:\n"
+        f"{tools_examples}\n\n"
         "Arguments rules:\n"
         '- For calculator, return {"expression": "<math expression>"} when possible.\n'
         '- For search_chunks, return {}.\n'
