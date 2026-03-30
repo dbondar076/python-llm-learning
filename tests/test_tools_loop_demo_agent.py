@@ -43,6 +43,7 @@ async def test_tools_loop_demo_agent_uses_calculator_and_finishes(
     ) -> ToolDecision:
         return ToolDecision(
             tool=decisions.pop(0),
+            arguments={"expression": "2 + 2 * 5"},
             reason="test decision",
         )
 
@@ -73,10 +74,12 @@ async def test_tools_loop_demo_agent_uses_calculator_and_finishes(
     result = await run_tools_loop_demo_agent("2 + 2 * 5")
 
     assert result["selected_tool"] == "calculator"
+    assert result["tool_arguments"]["expression"] == "2 + 2 * 5"
     assert result["tool_output"] == "12"
     assert result["answer"] == "The result is 12."
     assert result["steps_taken"] == 1
     assert result["next_action"] == "finish"
+    assert result["history"][0]["arguments"]["expression"] == "2 + 2 * 5"
 
 
 @pytest.mark.asyncio
@@ -94,6 +97,7 @@ async def test_tools_loop_demo_agent_two_steps(
     ) -> ToolDecision:
         return ToolDecision(
             tool=decisions.pop(0),
+            arguments={},
             reason="test decision",
         )
 
@@ -146,6 +150,7 @@ async def test_tools_loop_demo_agent_two_steps(
 
     assert result["steps_taken"] == 1
     assert result["selected_tool"] == "search_chunks"
+    assert result["tool_arguments"] == {}
     assert result["next_action"] == "finish"
     assert "Python" in result["answer"]
 
@@ -164,6 +169,7 @@ async def test_tools_loop_demo_agent_accumulates_history(
     ) -> ToolDecision:
         return ToolDecision(
             tool=decisions.pop(0),
+            arguments={"expression": "2 + 2 * 5"},
             reason="test decision",
         )
 
@@ -178,6 +184,7 @@ async def test_tools_loop_demo_agent_accumulates_history(
     async def fake_final_llm(prompt: str) -> str:
         assert "Tool history:" in prompt
         assert "Tool: calculator" in prompt
+        assert "Arguments: {'expression': '2 + 2 * 5'}" in prompt
         assert "Output:\n12" in prompt
         return "The calculation result is 12."
 
@@ -200,6 +207,7 @@ async def test_tools_loop_demo_agent_accumulates_history(
     assert len(result["history"]) == 1
     assert result["history"][0]["tool"] == "calculator"
     assert result["history"][0]["input"] == "2 + 2 * 5"
+    assert result["history"][0]["arguments"]["expression"] == "2 + 2 * 5"
     assert result["history"][0]["output"] == "12"
     assert result["answer"] == "The calculation result is 12."
     assert result["next_action"] == "finish"
@@ -221,6 +229,7 @@ async def test_tools_loop_demo_agent_runs_multi_tool_chain(
     ) -> ToolDecision:
         return ToolDecision(
             tool=decisions.pop(0),
+            arguments={},
             reason="test decision",
         )
 
@@ -285,7 +294,9 @@ async def test_tools_loop_demo_agent_runs_multi_tool_chain(
     assert result["steps_taken"] == 2
     assert len(result["history"]) == 2
     assert result["history"][0]["tool"] == "list_docs"
+    assert result["history"][0]["arguments"] == {}
     assert result["history"][1]["tool"] == "search_chunks"
+    assert result["history"][1]["arguments"] == {}
     assert result["next_action"] == "finish"
     assert "Python" in result["answer"]
 
@@ -305,6 +316,7 @@ async def test_tools_loop_demo_agent_uses_llm_assessment_to_finish(
     ) -> ToolDecision:
         return ToolDecision(
             tool=decisions.pop(0),
+            arguments={},
             reason="test decision",
         )
 

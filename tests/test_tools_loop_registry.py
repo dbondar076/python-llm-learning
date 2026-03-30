@@ -49,7 +49,7 @@ async def test_decide_next_tool_prompt_uses_registry_tools(
 
     async def fake_llm(prompt: str) -> str:
         captured["prompt"] = prompt
-        return '{"tool": "finish", "reason": "Enough information"}'
+        return '{"tool": "finish", "arguments": {}, "reason": "Enough information"}'
 
     monkeypatch.setattr(
         "app.agents.tools_loop_demo.tools.run_text_prompt_with_retry_async",
@@ -64,6 +64,7 @@ async def test_decide_next_tool_prompt_uses_registry_tools(
     )
 
     assert result.tool == "finish"
+    assert result.arguments == {}
     assert result.reason == "Enough information"
     assert "- calculator ->" in captured["prompt"]
     assert "- search_chunks ->" in captured["prompt"]
@@ -77,7 +78,7 @@ async def test_decide_next_tool_returns_structured_decision(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     async def fake_llm(prompt: str) -> str:
-        return '{"tool": "search_chunks", "reason": "Need factual lookup"}'
+        return '{"tool": "search_chunks", "arguments": {}, "reason": "Need factual lookup"}'
 
     monkeypatch.setattr(
         "app.agents.tools_loop_demo.tools.run_text_prompt_with_retry_async",
@@ -93,4 +94,33 @@ async def test_decide_next_tool_returns_structured_decision(
 
     assert isinstance(result, ToolDecision)
     assert result.tool == "search_chunks"
+    assert result.arguments == {}
     assert result.reason == "Need factual lookup"
+
+
+@pytest.mark.asyncio
+async def test_decide_next_tool_returns_structured_decision_with_arguments(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_llm(prompt: str) -> str:
+        return (
+            '{"tool": "calculator", '
+            '"arguments": {"expression": "2 + 2 * 5"}, '
+            '"reason": "Math question"}'
+        )
+
+    monkeypatch.setattr(
+        "app.agents.tools_loop_demo.tools.run_text_prompt_with_retry_async",
+        fake_llm,
+    )
+
+    result = await decide_next_tool_with_llm(
+        question="What is 2 + 2 * 5?",
+        steps_taken=0,
+        max_steps=3,
+        previous_tool_output=None,
+    )
+
+    assert result.tool == "calculator"
+    assert result.arguments["expression"] == "2 + 2 * 5"
+    assert result.reason == "Math question"

@@ -8,6 +8,7 @@ class ToolsLoopState(TypedDict, total=False):
     selected_tool: str
     decision_reason: str
     tool_input: str
+    tool_arguments: dict
     tool_output: str
     answer: str
     records: list[dict]

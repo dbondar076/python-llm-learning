@@ -131,11 +131,16 @@ async def decide_next_tool_with_llm(
         "You are a tool-loop routing assistant.\n"
         "Decide the next action.\n\n"
         "Return valid JSON with this shape:\n"
-        '{"tool": "<one allowed tool name>", "reason": "<short reason>"}\n\n'
+        '{"tool": "<allowed tool name>", "arguments": {...}, "reason": "<short reason>"}\n\n'
         "Allowed tool names:\n"
         f"{allowed_routes_text}\n\n"
         "Available tools:\n"
         f"{tools_description}\n\n"
+        "Arguments rules:\n"
+        '- For calculator, return {"expression": "<math expression>"} when possible.\n'
+        '- For search_chunks, return {}.\n'
+        '- For list_docs, return {}.\n'
+        '- For finish, return {}.\n\n'
         "Rules:\n"
         "- Use finish if enough information is already available or max steps are reached.\n"
         "- Reason must be short.\n"
@@ -147,17 +152,24 @@ async def decide_next_tool_with_llm(
     )
 
     raw = await run_text_prompt_with_retry_async(prompt)
-
     allowed = set(allowed_routes)
 
     try:
         data = json.loads(raw)
         decision = ToolDecision.model_validate(data)
     except Exception:
-        return ToolDecision(tool="finish", reason="Invalid model output")
+        return ToolDecision(
+            tool="finish",
+            arguments={},
+            reason="Invalid model output",
+        )
 
     if decision.tool not in allowed:
-        return ToolDecision(tool="finish", reason="Unknown tool")
+        return ToolDecision(
+            tool="finish",
+            arguments={},
+            reason="Unknown tool",
+        )
 
     return decision
 
