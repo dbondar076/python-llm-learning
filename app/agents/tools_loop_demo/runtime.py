@@ -27,6 +27,7 @@ async def run_tools_loop_demo_agent(
             "top_k": top_k,
             "max_steps": max_steps,
             "steps_taken": 0,
+            "history": [],
         }
     )
 

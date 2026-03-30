@@ -101,11 +101,13 @@ async def decide_next_tool_with_llm(
         "Return exactly one word:\n"
         "- calculator\n"
         "- search_chunks\n"
+        "- list_docs\n"
         "- finish\n\n"
         "Rules:\n"
-        "- If the user asks a math question, use calculator.\n"
-        "- If the user asks a factual knowledge question, use search_chunks.\n"
-        "- If enough information is already available or max steps are reached, use finish.\n"
+        "- Use calculator for math questions.\n"
+        "- Use search_chunks for factual knowledge-base questions.\n"
+        "- Use list_docs when the user asks what documents or sources are available.\n"
+        "- Use finish if enough information is already available or max steps are reached.\n"
         "- Do not explain your choice.\n\n"
         f"Question:\n{question}\n\n"
         f"Steps taken: {steps_taken}\n"
@@ -116,7 +118,27 @@ async def decide_next_tool_with_llm(
     raw = await run_text_prompt_with_retry_async(prompt)
     route = raw.strip().lower()
 
-    if route not in {"calculator", "search_chunks", "finish"}:
+    allowed = {"calculator", "search_chunks", "list_docs", "finish"}
+
+    if route not in allowed:
         return "finish"
 
     return route
+
+
+def list_documents_tool(records: list[dict]) -> str:
+    seen = []
+    seen_ids = set()
+
+    for record in records:
+        doc_id = record["doc_id"]
+        title = record["title"]
+
+        if doc_id not in seen_ids:
+            seen_ids.add(doc_id)
+            seen.append(f"{title} ({doc_id})")
+
+    if not seen:
+        return "No documents available."
+
+    return ", ".join(seen)

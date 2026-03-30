@@ -1,11 +1,17 @@
+import logging
+
+from app.agents.tools_loop_demo.registry import is_known_tool
 from app.agents.tools_loop_demo.state import ToolsLoopState
 from app.agents.tools_loop_demo.tools import (
     calculator_tool,
     decide_next_tool_with_llm,
     extract_expression,
+    list_documents_tool,
     search_chunks_tool,
 )
 from app.services.llm_service import run_text_prompt_with_retry_async
+
+logger = logging.getLogger(__name__)
 
 
 async def decide_node(state: ToolsLoopState) -> ToolsLoopState:
@@ -26,6 +32,9 @@ async def decide_node(state: ToolsLoopState) -> ToolsLoopState:
 
     tool_input = state["question"]
 
+    if selected_tool != "finish" and not is_known_tool(selected_tool):
+        selected_tool = "finish"
+
     if selected_tool == "calculator":
         expression = extract_expression(state["question"])
         if expression:
@@ -42,9 +51,26 @@ async def decide_node(state: ToolsLoopState) -> ToolsLoopState:
 async def calculator_node(state: ToolsLoopState) -> ToolsLoopState:
     output = calculator_tool(state["tool_input"])
 
+    history = list(state.get("history", []))
+    history.append(
+        {
+            "tool": "calculator",
+            "input": state["tool_input"],
+            "output": output,
+        }
+    )
+
+    logger.info(
+        "LOOP step=%s tool=%s input=%s",
+        state.get("steps_taken", 0) + 1,
+        "calculator",
+        state["tool_input"],
+    )
+
     return {
         "tool_output": output,
         "steps_taken": state.get("steps_taken", 0) + 1,
+        "history": history,
     }
 
 
@@ -55,26 +81,62 @@ async def search_node(state: ToolsLoopState) -> ToolsLoopState:
         top_k=state.get("top_k", 3),
     )
 
+    history = list(state.get("history", []))
+    history.append(
+        {
+            "tool": "search_chunks",
+            "input": state["tool_input"],
+            "output": output,
+        }
+    )
+
+    logger.info(
+        "LOOP step=%s tool=%s input=%s",
+        state.get("steps_taken", 0) + 1,
+        "search_chunks",
+        state["tool_input"],
+    )
+
     return {
         "tool_output": output,
         "steps_taken": state.get("steps_taken", 0) + 1,
+        "history": history,
     }
+
+
+def build_history_text(history: list[dict]) -> str:
+    if not history:
+        return ""
+
+    parts = []
+    for i, step in enumerate(history, start=1):
+        parts.append(
+            f"Step {i}\n"
+            f"Tool: {step.get('tool', '')}\n"
+            f"Input: {step.get('input', '')}\n"
+            f"Output:\n{step.get('output', '')}"
+        )
+
+    return "\n\n".join(parts)
 
 
 async def finish_node(state: ToolsLoopState) -> ToolsLoopState:
     question = state["question"]
-    tool_output = state.get("tool_output", "")
+    history = state.get("history", [])
+    history_text = build_history_text(history)
 
-    if not tool_output:
+    if not history_text:
         return {
             "answer": "I don't know based on the available information.",
         }
 
     prompt = (
-        "Write a final answer for the user based on the tool output.\n"
-        "Be concise and helpful.\n\n"
+        "You are preparing the final answer for the user.\n"
+        "Use the full tool history below.\n"
+        "Be concise, helpful, and grounded in the tool outputs.\n"
+        "Do not invent facts.\n\n"
         f"Question:\n{question}\n\n"
-        f"Tool output:\n{tool_output}\n\n"
+        f"Tool history:\n{history_text}\n\n"
         "Final answer:"
     )
 
@@ -82,4 +144,30 @@ async def finish_node(state: ToolsLoopState) -> ToolsLoopState:
 
     return {
         "answer": answer,
+    }
+
+
+async def list_docs_node(state: ToolsLoopState) -> ToolsLoopState:
+    output = list_documents_tool(state.get("records", []))
+
+    history = list(state.get("history", []))
+    history.append(
+        {
+            "tool": "list_docs",
+            "input": "records",
+            "output": output,
+        }
+    )
+
+    logger.info(
+        "LOOP step=%s tool=%s input=%s",
+        state.get("steps_taken", 0) + 1,
+        "list_docs",
+        "records",
+    )
+
+    return {
+        "tool_output": output,
+        "steps_taken": state.get("steps_taken", 0) + 1,
+        "history": history,
     }
