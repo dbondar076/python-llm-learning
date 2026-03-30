@@ -7,11 +7,9 @@ from app.agents.tools_loop_demo.edges import (
 )
 from app.agents.tools_loop_demo.nodes import (
     assess_node,
-    calculator_node,
     decide_node,
     finish_node,
-    list_docs_node,
-    search_node,
+    tool_node,
 )
 from app.agents.tools_loop_demo.state import ToolsLoopState
 
@@ -20,9 +18,7 @@ def build_tools_loop_graph():
     graph = StateGraph(ToolsLoopState)
 
     graph.add_node("decide", decide_node)
-    graph.add_node("calculator", calculator_node)
-    graph.add_node("search", search_node)
-    graph.add_node("list_docs", list_docs_node)
+    graph.add_node("tool", tool_node)
     graph.add_node("assess", assess_node)
     graph.add_node("finish", finish_node)
 
@@ -32,31 +28,13 @@ def build_tools_loop_graph():
         "decide",
         route_after_decide,
         {
-            "calculator": "calculator",
-            "search": "search",
-            "list_docs": "list_docs",
+            "tool": "tool",
             "finish": "finish",
         },
     )
 
     graph.add_conditional_edges(
-        "calculator",
-        route_after_tool,
-        {
-            "assess": "assess",
-        },
-    )
-
-    graph.add_conditional_edges(
-        "search",
-        route_after_tool,
-        {
-            "assess": "assess",
-        },
-    )
-
-    graph.add_conditional_edges(
-        "list_docs",
+        "tool",
         route_after_tool,
         {
             "assess": "assess",

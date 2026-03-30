@@ -64,9 +64,6 @@ async def test_tools_loop_demo_agent_two_steps(
     ) -> str:
         return decisions.pop(0)
 
-    def fake_search_chunks_tool(question: str, records, top_k: int = 3) -> str:
-        return "Python [c1]: Python is a programming language."
-
     async def fake_assess_whether_to_continue_with_llm(
         question: str,
         history_text: str,
@@ -78,13 +75,37 @@ async def test_tools_loop_demo_agent_two_steps(
     async def fake_final_llm(prompt: str) -> str:
         return "Python is a programming language."
 
+    def fake_get_tool_config(tool_name: str) -> dict | None:
+        if tool_name == "search_chunks":
+            return {
+                "node": "tool",
+                "kind": "retrieval",
+                "input_mode": "question+records",
+                "callable": lambda question, records, top_k=3: "Python [c1]: Python is a programming language.",
+            }
+        if tool_name == "calculator":
+            return {
+                "node": "tool",
+                "kind": "math",
+                "input_mode": "tool_input",
+                "callable": lambda expression: "12",
+            }
+        if tool_name == "list_docs":
+            return {
+                "node": "tool",
+                "kind": "metadata",
+                "input_mode": "records",
+                "callable": lambda records: "Python (doc1)",
+            }
+        return None
+
     monkeypatch.setattr(
         "app.agents.tools_loop_demo.nodes.decide_next_tool_with_llm",
         fake_decide_next_tool_with_llm,
     )
     monkeypatch.setattr(
-        "app.agents.tools_loop_demo.nodes.search_chunks_tool",
-        fake_search_chunks_tool,
+        "app.agents.tools_loop_demo.nodes.get_tool_config",
+        fake_get_tool_config,
     )
     monkeypatch.setattr(
         "app.agents.tools_loop_demo.nodes.assess_whether_to_continue_with_llm",
@@ -193,13 +214,34 @@ async def test_tools_loop_demo_agent_runs_multi_tool_chain(
     ) -> str:
         return assess_decisions.pop(0)
 
-    def fake_search_chunks_tool(question: str, records, top_k: int = 3) -> str:
-        return "Python [c1]: Python is a programming language."
-
     async def fake_final_llm(prompt: str) -> str:
         assert "Tool: list_docs" in prompt
         assert "Tool: search_chunks" in prompt
         return "Python is documented in the available sources and is a programming language."
+
+    def fake_get_tool_config(tool_name: str) -> dict | None:
+        if tool_name == "search_chunks":
+            return {
+                "node": "tool",
+                "kind": "retrieval",
+                "input_mode": "question+records",
+                "callable": lambda question, records, top_k=3: "Python [c1]: Python is a programming language.",
+            }
+        if tool_name == "list_docs":
+            return {
+                "node": "tool",
+                "kind": "metadata",
+                "input_mode": "records",
+                "callable": lambda records: "Python (doc1), FastAPI (doc2)",
+            }
+        if tool_name == "calculator":
+            return {
+                "node": "tool",
+                "kind": "math",
+                "input_mode": "tool_input",
+                "callable": lambda expression: "12",
+            }
+        return None
 
     monkeypatch.setattr(
         "app.agents.tools_loop_demo.nodes.decide_next_tool_with_llm",
@@ -210,8 +252,8 @@ async def test_tools_loop_demo_agent_runs_multi_tool_chain(
         fake_assess_whether_to_continue_with_llm,
     )
     monkeypatch.setattr(
-        "app.agents.tools_loop_demo.nodes.search_chunks_tool",
-        fake_search_chunks_tool,
+        "app.agents.tools_loop_demo.nodes.get_tool_config",
+        fake_get_tool_config,
     )
     monkeypatch.setattr(
         "app.agents.tools_loop_demo.nodes.run_text_prompt_with_retry_async",
@@ -265,9 +307,6 @@ async def test_tools_loop_demo_agent_uses_llm_assessment_to_finish(
     ) -> str:
         return decisions.pop(0)
 
-    def fake_search_chunks_tool(question: str, records, top_k: int = 3) -> str:
-        return "Python [c1]: Python is a programming language."
-
     async def fake_assess_whether_to_continue_with_llm(
         question: str,
         history_text: str,
@@ -280,13 +319,23 @@ async def test_tools_loop_demo_agent_uses_llm_assessment_to_finish(
     async def fake_final_llm(prompt: str) -> str:
         return "Python is a programming language."
 
+    def fake_get_tool_config(tool_name: str) -> dict | None:
+        if tool_name == "search_chunks":
+            return {
+                "node": "tool",
+                "kind": "retrieval",
+                "input_mode": "question+records",
+                "callable": lambda question, records, top_k=3: "Python [c1]: Python is a programming language.",
+            }
+        return None
+
     monkeypatch.setattr(
         "app.agents.tools_loop_demo.nodes.decide_next_tool_with_llm",
         fake_decide_next_tool_with_llm,
     )
     monkeypatch.setattr(
-        "app.agents.tools_loop_demo.nodes.search_chunks_tool",
-        fake_search_chunks_tool,
+        "app.agents.tools_loop_demo.nodes.get_tool_config",
+        fake_get_tool_config,
     )
     monkeypatch.setattr(
         "app.agents.tools_loop_demo.nodes.assess_whether_to_continue_with_llm",

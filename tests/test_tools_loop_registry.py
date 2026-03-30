@@ -15,9 +15,9 @@ def test_tools_registry_contains_expected_tools() -> None:
 
 
 def test_get_tool_node_name_returns_expected_node() -> None:
-    assert get_tool_node_name("calculator") == "calculator"
-    assert get_tool_node_name("search_chunks") == "search"
-    assert get_tool_node_name("list_docs") == "list_docs"
+    assert get_tool_node_name("calculator") == "tool"
+    assert get_tool_node_name("search_chunks") == "tool"
+    assert get_tool_node_name("list_docs") == "tool"
 
 
 def test_is_known_tool() -> None:
@@ -31,5 +31,6 @@ def test_registry_entries_have_required_keys() -> None:
     for name, config in TOOLS_REGISTRY.items():
         assert "node" in config
         assert "kind" in config
+        assert "input_mode" in config
         assert "callable" in config
         assert isinstance(name, str)
