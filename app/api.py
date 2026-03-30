@@ -10,7 +10,7 @@ from app.routers.analysis import router as analysis_router
 from app.routers.health import router as health_router
 from app.routers.rag import router as rag_router
 from app.services.rag_index_service import load_chunk_embeddings
-
+from app.routers import tools_demo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -52,3 +52,4 @@ async def add_request_id_middleware(request: Request, call_next):
 app.include_router(health_router)
 app.include_router(analysis_router)
 app.include_router(rag_router)
+app.include_router(tools_demo.router)

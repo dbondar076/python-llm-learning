@@ -113,3 +113,25 @@ class RagAnswerRequest(BaseModel):
             }
         }
     )
+
+
+class ToolsDemoRequest(BaseModel):
+    question: str
+    top_k: int = Field(default=3, ge=1, le=20)
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "question": "What is Python?",
+                "top_k": 3,
+            }
+        }
+    )
+
+
+class ToolsDemoResponse(BaseModel):
+    answer: str
+    route: str | None = None
+    selected_tool: str | None = None
+    tool_input: str | None = None
+    tool_output: str | list[dict] | None = None
