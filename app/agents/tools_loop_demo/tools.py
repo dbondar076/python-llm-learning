@@ -1,7 +1,9 @@
 import ast
+import json
 import operator as op
 import re
 
+from app.agents.tools_loop_demo.schemas import ToolDecision
 from app.agents.tools_loop_demo.tool_specs import TOOLS_SPECS
 from app.services.llm_service import run_text_prompt_with_retry_async
 from app.services.rag_retrieval_service import retrieve_top_chunks
@@ -118,7 +120,7 @@ async def decide_next_tool_with_llm(
     steps_taken: int,
     max_steps: int,
     previous_tool_output: str | None,
-) -> str:
+) -> ToolDecision:
     tools_description = build_tools_description_text()
     tool_names = list(TOOLS_SPECS.keys())
 
@@ -128,13 +130,16 @@ async def decide_next_tool_with_llm(
     prompt = (
         "You are a tool-loop routing assistant.\n"
         "Decide the next action.\n\n"
-        "Return exactly one word from this list:\n"
+        "Return valid JSON with this shape:\n"
+        '{"tool": "<one allowed tool name>", "reason": "<short reason>"}\n\n'
+        "Allowed tool names:\n"
         f"{allowed_routes_text}\n\n"
         "Available tools:\n"
         f"{tools_description}\n\n"
         "Rules:\n"
         "- Use finish if enough information is already available or max steps are reached.\n"
-        "- Do not explain your choice.\n\n"
+        "- Reason must be short.\n"
+        "- Return JSON only.\n\n"
         f"Question:\n{question}\n\n"
         f"Steps taken: {steps_taken}\n"
         f"Max steps: {max_steps}\n\n"
@@ -142,14 +147,19 @@ async def decide_next_tool_with_llm(
     )
 
     raw = await run_text_prompt_with_retry_async(prompt)
-    route = raw.strip().lower()
 
     allowed = set(allowed_routes)
 
-    if route not in allowed:
-        return "finish"
+    try:
+        data = json.loads(raw)
+        decision = ToolDecision.model_validate(data)
+    except Exception:
+        return ToolDecision(tool="finish", reason="Invalid model output")
 
-    return route
+    if decision.tool not in allowed:
+        return ToolDecision(tool="finish", reason="Unknown tool")
+
+    return decision
 
 
 async def assess_whether_to_continue_with_llm(

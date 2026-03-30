@@ -6,6 +6,7 @@ from app.agents.tools_loop_demo.registry import (
     get_tool_node_name,
     is_known_tool,
 )
+from app.agents.tools_loop_demo.schemas import ToolDecision
 from app.agents.tools_loop_demo.tools import decide_next_tool_with_llm
 
 
@@ -48,7 +49,7 @@ async def test_decide_next_tool_prompt_uses_registry_tools(
 
     async def fake_llm(prompt: str) -> str:
         captured["prompt"] = prompt
-        return "finish"
+        return '{"tool": "finish", "reason": "Enough information"}'
 
     monkeypatch.setattr(
         "app.agents.tools_loop_demo.tools.run_text_prompt_with_retry_async",
@@ -62,9 +63,34 @@ async def test_decide_next_tool_prompt_uses_registry_tools(
         previous_tool_output=None,
     )
 
-    assert result == "finish"
+    assert result.tool == "finish"
+    assert result.reason == "Enough information"
     assert "- calculator ->" in captured["prompt"]
     assert "- search_chunks ->" in captured["prompt"]
     assert "- list_docs ->" in captured["prompt"]
     assert "- finish" in captured["prompt"]
     assert "Use for arithmetic calculations" in captured["prompt"]
+
+
+@pytest.mark.asyncio
+async def test_decide_next_tool_returns_structured_decision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_llm(prompt: str) -> str:
+        return '{"tool": "search_chunks", "reason": "Need factual lookup"}'
+
+    monkeypatch.setattr(
+        "app.agents.tools_loop_demo.tools.run_text_prompt_with_retry_async",
+        fake_llm,
+    )
+
+    result = await decide_next_tool_with_llm(
+        question="What is Python?",
+        steps_taken=0,
+        max_steps=3,
+        previous_tool_output=None,
+    )
+
+    assert isinstance(result, ToolDecision)
+    assert result.tool == "search_chunks"
+    assert result.reason == "Need factual lookup"

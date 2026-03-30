@@ -21,12 +21,15 @@ async def decide_node(state: ToolsLoopState) -> ToolsLoopState:
             "selected_tool": "finish",
         }
 
-    selected_tool = await decide_next_tool_with_llm(
+    decision = await decide_next_tool_with_llm(
         question=state["question"],
         steps_taken=steps_taken,
         max_steps=max_steps,
         previous_tool_output=state.get("tool_output"),
     )
+
+    selected_tool = decision.tool
+    decision_reason = decision.reason
 
     if selected_tool != "finish" and not is_known_tool(selected_tool):
         selected_tool = "finish"
@@ -42,6 +45,7 @@ async def decide_node(state: ToolsLoopState) -> ToolsLoopState:
 
     return {
         "selected_tool": selected_tool,
+        "decision_reason": decision_reason,
         "tool_input": tool_input,
     }
 
@@ -55,6 +59,7 @@ def build_history_text(history: list[dict]) -> str:
         parts.append(
             f"Step {i}\n"
             f"Tool: {step.get('tool', '')}\n"
+            f"Reason: {step.get('reason', '')}\n"
             f"Input: {step.get('input', '')}\n"
             f"Output:\n{step.get('output', '')}"
         )
@@ -102,6 +107,7 @@ async def tool_node(state: ToolsLoopState) -> ToolsLoopState:
             "tool": selected_tool,
             "input": history_input,
             "output": output,
+            "reason": state.get("decision_reason", ""),
         }
     )
 

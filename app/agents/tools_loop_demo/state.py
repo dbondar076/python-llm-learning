@@ -6,6 +6,7 @@ class ToolsLoopState(TypedDict, total=False):
     steps_taken: int
     max_steps: int
     selected_tool: str
+    decision_reason: str
     tool_input: str
     tool_output: str
     answer: str

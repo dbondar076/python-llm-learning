@@ -1,6 +1,7 @@
 import pytest
 
 from app.agents.tools_loop_demo.runtime import run_tools_loop_demo_agent
+from app.agents.tools_loop_demo.schemas import ToolDecision
 
 
 def build_fake_tool_configs() -> dict[str, dict]:
@@ -39,8 +40,11 @@ async def test_tools_loop_demo_agent_uses_calculator_and_finishes(
         steps_taken: int,
         max_steps: int,
         previous_tool_output: str | None,
-    ) -> str:
-        return decisions.pop(0)
+    ) -> ToolDecision:
+        return ToolDecision(
+            tool=decisions.pop(0),
+            reason="test decision",
+        )
 
     async def fake_assess_whether_to_continue_with_llm(
         question: str,
@@ -87,8 +91,11 @@ async def test_tools_loop_demo_agent_two_steps(
         steps_taken: int,
         max_steps: int,
         previous_tool_output: str | None,
-    ) -> str:
-        return decisions.pop(0)
+    ) -> ToolDecision:
+        return ToolDecision(
+            tool=decisions.pop(0),
+            reason="test decision",
+        )
 
     async def fake_assess_whether_to_continue_with_llm(
         question: str,
@@ -154,8 +161,11 @@ async def test_tools_loop_demo_agent_accumulates_history(
         steps_taken: int,
         max_steps: int,
         previous_tool_output: str | None,
-    ) -> str:
-        return decisions.pop(0)
+    ) -> ToolDecision:
+        return ToolDecision(
+            tool=decisions.pop(0),
+            reason="test decision",
+        )
 
     async def fake_assess_whether_to_continue_with_llm(
         question: str,
@@ -208,8 +218,11 @@ async def test_tools_loop_demo_agent_runs_multi_tool_chain(
         steps_taken: int,
         max_steps: int,
         previous_tool_output: str | None,
-    ) -> str:
-        return decisions.pop(0)
+    ) -> ToolDecision:
+        return ToolDecision(
+            tool=decisions.pop(0),
+            reason="test decision",
+        )
 
     async def fake_assess_whether_to_continue_with_llm(
         question: str,
@@ -289,8 +302,11 @@ async def test_tools_loop_demo_agent_uses_llm_assessment_to_finish(
         steps_taken: int,
         max_steps: int,
         previous_tool_output: str | None,
-    ) -> str:
-        return decisions.pop(0)
+    ) -> ToolDecision:
+        return ToolDecision(
+            tool=decisions.pop(0),
+            reason="test decision",
+        )
 
     async def fake_assess_whether_to_continue_with_llm(
         question: str,
