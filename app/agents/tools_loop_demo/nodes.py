@@ -8,6 +8,7 @@ from app.agents.tools_loop_demo.tools import (
     extract_expression,
     list_documents_tool,
     search_chunks_tool,
+    assess_whether_to_continue_with_llm,
 )
 from app.services.llm_service import run_text_prompt_with_retry_async
 
@@ -170,4 +171,33 @@ async def list_docs_node(state: ToolsLoopState) -> ToolsLoopState:
         "tool_output": output,
         "steps_taken": state.get("steps_taken", 0) + 1,
         "history": history,
+    }
+
+
+async def assess_node(state: ToolsLoopState) -> ToolsLoopState:
+    steps_taken = state.get("steps_taken", 0)
+    max_steps = state.get("max_steps", 2)
+
+    if steps_taken >= max_steps:
+        return {
+            "next_action": "finish",
+        }
+
+    history = state.get("history", [])
+    history_text = build_history_text(history)
+
+    if not history_text:
+        return {
+            "next_action": "finish",
+        }
+
+    decision = await assess_whether_to_continue_with_llm(
+        question=state["question"],
+        history_text=history_text,
+        steps_taken=steps_taken,
+        max_steps=max_steps,
+    )
+
+    return {
+        "next_action": decision,
     }

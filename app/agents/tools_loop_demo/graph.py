@@ -1,7 +1,12 @@
 from langgraph.graph import END, START, StateGraph
 
-from app.agents.tools_loop_demo.edges import route_after_decide, route_after_tool
+from app.agents.tools_loop_demo.edges import (
+    route_after_assess,
+    route_after_decide,
+    route_after_tool,
+)
 from app.agents.tools_loop_demo.nodes import (
+    assess_node,
     calculator_node,
     decide_node,
     finish_node,
@@ -18,6 +23,7 @@ def build_tools_loop_graph():
     graph.add_node("calculator", calculator_node)
     graph.add_node("search", search_node)
     graph.add_node("list_docs", list_docs_node)
+    graph.add_node("assess", assess_node)
     graph.add_node("finish", finish_node)
 
     graph.add_edge(START, "decide")
@@ -37,8 +43,7 @@ def build_tools_loop_graph():
         "calculator",
         route_after_tool,
         {
-            "decide": "decide",
-            "finish": "finish",
+            "assess": "assess",
         },
     )
 
@@ -46,14 +51,21 @@ def build_tools_loop_graph():
         "search",
         route_after_tool,
         {
-            "decide": "decide",
-            "finish": "finish",
+            "assess": "assess",
         },
     )
 
     graph.add_conditional_edges(
         "list_docs",
         route_after_tool,
+        {
+            "assess": "assess",
+        },
+    )
+
+    graph.add_conditional_edges(
+        "assess",
+        route_after_assess,
         {
             "decide": "decide",
             "finish": "finish",

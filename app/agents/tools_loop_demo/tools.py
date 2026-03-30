@@ -142,3 +142,34 @@ def list_documents_tool(records: list[dict]) -> str:
         return "No documents available."
 
     return ", ".join(seen)
+
+
+async def assess_whether_to_continue_with_llm(
+    question: str,
+    history_text: str,
+    steps_taken: int,
+    max_steps: int,
+) -> str:
+    prompt = (
+        "You are deciding whether the agent should continue using tools or finish.\n\n"
+        "Return exactly one word:\n"
+        "- continue\n"
+        "- finish\n\n"
+        "Rules:\n"
+        "- Return finish if the tool history already contains enough information to answer the user's question.\n"
+        "- Return finish if max steps are reached.\n"
+        "- Return continue only if another tool step is clearly needed.\n"
+        "- Do not explain your choice.\n\n"
+        f"Question:\n{question}\n\n"
+        f"Steps taken: {steps_taken}\n"
+        f"Max steps: {max_steps}\n\n"
+        f"Tool history:\n{history_text}"
+    )
+
+    raw = await run_text_prompt_with_retry_async(prompt)
+    decision = raw.strip().lower()
+
+    if decision not in {"continue", "finish"}:
+        return "finish"
+
+    return decision

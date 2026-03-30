@@ -12,14 +12,13 @@ def route_after_decide(state: ToolsLoopState) -> str:
 
 
 def route_after_tool(state: ToolsLoopState) -> str:
-    steps_taken = state.get("steps_taken", 0)
-    max_steps = state.get("max_steps", 2)
-    tool_output = state.get("tool_output", "")
+    return "assess"
 
-    if steps_taken >= max_steps:
-        return "finish"
 
-    if not tool_output or tool_output == "No relevant chunks found.":
-        return "finish"
+def route_after_assess(state: ToolsLoopState) -> str:
+    next_action = state.get("next_action", "finish")
 
-    return "decide"
+    if next_action == "continue":
+        return "decide"
+
+    return "finish"

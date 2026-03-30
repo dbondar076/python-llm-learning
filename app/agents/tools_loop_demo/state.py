@@ -12,3 +12,4 @@ class ToolsLoopState(TypedDict, total=False):
     records: list[dict]
     top_k: int
     history: list[dict]
+    next_action: str
