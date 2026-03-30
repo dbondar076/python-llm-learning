@@ -2,6 +2,7 @@ import ast
 import operator as op
 import re
 
+from app.agents.tools_loop_demo.tool_specs import TOOLS_SPECS
 from app.services.llm_service import run_text_prompt_with_retry_async
 from app.services.rag_retrieval_service import retrieve_top_chunks
 
@@ -82,48 +83,9 @@ def search_chunks_tool(question: str, records: list[dict], top_k: int = 3) -> st
 
     lines = []
     for chunk in chunks:
-        lines.append(
-            f"{chunk['title']} [{chunk['chunk_id']}]: {chunk['text']}"
-        )
+        lines.append(f"{chunk['title']} [{chunk['chunk_id']}]: {chunk['text']}")
 
     return "\n".join(lines)
-
-
-async def decide_next_tool_with_llm(
-    question: str,
-    steps_taken: int,
-    max_steps: int,
-    previous_tool_output: str | None,
-) -> str:
-    prompt = (
-        "You are a tool-loop routing assistant.\n"
-        "Decide the next action.\n\n"
-        "Return exactly one word:\n"
-        "- calculator\n"
-        "- search_chunks\n"
-        "- list_docs\n"
-        "- finish\n\n"
-        "Rules:\n"
-        "- Use calculator for math questions.\n"
-        "- Use search_chunks for factual knowledge-base questions.\n"
-        "- Use list_docs when the user asks what documents or sources are available.\n"
-        "- Use finish if enough information is already available or max steps are reached.\n"
-        "- Do not explain your choice.\n\n"
-        f"Question:\n{question}\n\n"
-        f"Steps taken: {steps_taken}\n"
-        f"Max steps: {max_steps}\n\n"
-        f"Previous tool output:\n{previous_tool_output or ''}"
-    )
-
-    raw = await run_text_prompt_with_retry_async(prompt)
-    route = raw.strip().lower()
-
-    allowed = {"calculator", "search_chunks", "list_docs", "finish"}
-
-    if route not in allowed:
-        return "finish"
-
-    return route
 
 
 def list_documents_tool(records: list[dict]) -> str:
@@ -142,6 +104,52 @@ def list_documents_tool(records: list[dict]) -> str:
         return "No documents available."
 
     return ", ".join(seen)
+
+
+def build_tools_description_text() -> str:
+    lines = []
+    for name, config in TOOLS_SPECS.items():
+        lines.append(f"- {name} -> {config['description']}")
+    return "\n".join(lines)
+
+
+async def decide_next_tool_with_llm(
+    question: str,
+    steps_taken: int,
+    max_steps: int,
+    previous_tool_output: str | None,
+) -> str:
+    tools_description = build_tools_description_text()
+    tool_names = list(TOOLS_SPECS.keys())
+
+    allowed_routes = tool_names + ["finish"]
+    allowed_routes_text = "\n".join(f"- {name}" for name in allowed_routes)
+
+    prompt = (
+        "You are a tool-loop routing assistant.\n"
+        "Decide the next action.\n\n"
+        "Return exactly one word from this list:\n"
+        f"{allowed_routes_text}\n\n"
+        "Available tools:\n"
+        f"{tools_description}\n\n"
+        "Rules:\n"
+        "- Use finish if enough information is already available or max steps are reached.\n"
+        "- Do not explain your choice.\n\n"
+        f"Question:\n{question}\n\n"
+        f"Steps taken: {steps_taken}\n"
+        f"Max steps: {max_steps}\n\n"
+        f"Previous tool output:\n{previous_tool_output or ''}"
+    )
+
+    raw = await run_text_prompt_with_retry_async(prompt)
+    route = raw.strip().lower()
+
+    allowed = set(allowed_routes)
+
+    if route not in allowed:
+        return "finish"
+
+    return route
 
 
 async def assess_whether_to_continue_with_llm(

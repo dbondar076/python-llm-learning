@@ -1,3 +1,4 @@
+from app.agents.tools_loop_demo.tool_specs import TOOLS_SPECS
 from app.agents.tools_loop_demo.tools import (
     calculator_tool,
     list_documents_tool,
@@ -7,21 +8,15 @@ from app.agents.tools_loop_demo.tools import (
 
 TOOLS_REGISTRY = {
     "calculator": {
-        "node": "tool",
-        "kind": "math",
-        "input_mode": "tool_input",
+        **TOOLS_SPECS["calculator"],
         "callable": calculator_tool,
     },
     "search_chunks": {
-        "node": "tool",
-        "kind": "retrieval",
-        "input_mode": "question+records",
+        **TOOLS_SPECS["search_chunks"],
         "callable": search_chunks_tool,
     },
     "list_docs": {
-        "node": "tool",
-        "kind": "metadata",
-        "input_mode": "records",
+        **TOOLS_SPECS["list_docs"],
         "callable": list_documents_tool,
     },
 }

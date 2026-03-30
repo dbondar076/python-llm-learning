@@ -3,6 +3,31 @@ import pytest
 from app.agents.tools_loop_demo.runtime import run_tools_loop_demo_agent
 
 
+def build_fake_tool_configs() -> dict[str, dict]:
+    return {
+        "calculator": {
+            "node": "tool",
+            "kind": "math",
+            "input_mode": "tool_input",
+            "callable": lambda expression: "12",
+        },
+        "search_chunks": {
+            "node": "tool",
+            "kind": "retrieval",
+            "input_mode": "question+records",
+            "callable": lambda question, records, top_k=3: (
+                "Python [c1]: Python is a programming language."
+            ),
+        },
+        "list_docs": {
+            "node": "tool",
+            "kind": "metadata",
+            "input_mode": "records",
+            "callable": lambda records: "Python (doc1), FastAPI (doc2)",
+        },
+    }
+
+
 @pytest.mark.asyncio
 async def test_tools_loop_demo_agent_uses_calculator_and_finishes(
     monkeypatch: pytest.MonkeyPatch,
@@ -55,6 +80,7 @@ async def test_tools_loop_demo_agent_two_steps(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     decisions = ["search_chunks"]
+    tool_configs = build_fake_tool_configs()
 
     async def fake_decide_next_tool_with_llm(
         question: str,
@@ -76,28 +102,7 @@ async def test_tools_loop_demo_agent_two_steps(
         return "Python is a programming language."
 
     def fake_get_tool_config(tool_name: str) -> dict | None:
-        if tool_name == "search_chunks":
-            return {
-                "node": "tool",
-                "kind": "retrieval",
-                "input_mode": "question+records",
-                "callable": lambda question, records, top_k=3: "Python [c1]: Python is a programming language.",
-            }
-        if tool_name == "calculator":
-            return {
-                "node": "tool",
-                "kind": "math",
-                "input_mode": "tool_input",
-                "callable": lambda expression: "12",
-            }
-        if tool_name == "list_docs":
-            return {
-                "node": "tool",
-                "kind": "metadata",
-                "input_mode": "records",
-                "callable": lambda records: "Python (doc1)",
-            }
-        return None
+        return tool_configs.get(tool_name)
 
     monkeypatch.setattr(
         "app.agents.tools_loop_demo.nodes.decide_next_tool_with_llm",
@@ -195,6 +200,8 @@ async def test_tools_loop_demo_agent_runs_multi_tool_chain(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     decisions = ["list_docs", "search_chunks"]
+    assess_decisions = ["continue", "finish"]
+    tool_configs = build_fake_tool_configs()
 
     async def fake_decide_next_tool_with_llm(
         question: str,
@@ -203,8 +210,6 @@ async def test_tools_loop_demo_agent_runs_multi_tool_chain(
         previous_tool_output: str | None,
     ) -> str:
         return decisions.pop(0)
-
-    assess_decisions = ["continue", "finish"]
 
     async def fake_assess_whether_to_continue_with_llm(
         question: str,
@@ -220,28 +225,7 @@ async def test_tools_loop_demo_agent_runs_multi_tool_chain(
         return "Python is documented in the available sources and is a programming language."
 
     def fake_get_tool_config(tool_name: str) -> dict | None:
-        if tool_name == "search_chunks":
-            return {
-                "node": "tool",
-                "kind": "retrieval",
-                "input_mode": "question+records",
-                "callable": lambda question, records, top_k=3: "Python [c1]: Python is a programming language.",
-            }
-        if tool_name == "list_docs":
-            return {
-                "node": "tool",
-                "kind": "metadata",
-                "input_mode": "records",
-                "callable": lambda records: "Python (doc1), FastAPI (doc2)",
-            }
-        if tool_name == "calculator":
-            return {
-                "node": "tool",
-                "kind": "math",
-                "input_mode": "tool_input",
-                "callable": lambda expression: "12",
-            }
-        return None
+        return tool_configs.get(tool_name)
 
     monkeypatch.setattr(
         "app.agents.tools_loop_demo.nodes.decide_next_tool_with_llm",
@@ -298,6 +282,7 @@ async def test_tools_loop_demo_agent_uses_llm_assessment_to_finish(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     decisions = ["search_chunks"]
+    tool_configs = build_fake_tool_configs()
 
     async def fake_decide_next_tool_with_llm(
         question: str,
@@ -320,14 +305,7 @@ async def test_tools_loop_demo_agent_uses_llm_assessment_to_finish(
         return "Python is a programming language."
 
     def fake_get_tool_config(tool_name: str) -> dict | None:
-        if tool_name == "search_chunks":
-            return {
-                "node": "tool",
-                "kind": "retrieval",
-                "input_mode": "question+records",
-                "callable": lambda question, records, top_k=3: "Python [c1]: Python is a programming language.",
-            }
-        return None
+        return tool_configs.get(tool_name)
 
     monkeypatch.setattr(
         "app.agents.tools_loop_demo.nodes.decide_next_tool_with_llm",
