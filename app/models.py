@@ -135,3 +135,18 @@ class ToolsDemoResponse(BaseModel):
     selected_tool: str | None = None
     tool_input: str | None = None
     tool_output: str | list[dict] | None = None
+
+
+class ToolsLoopDemoRequest(BaseModel):
+    question: str
+    top_k: int = 3
+    max_steps: int = 3
+
+
+class ToolsLoopDemoResponse(BaseModel):
+    answer: str
+    selected_tool: str | None
+    tool_output: str
+    steps_taken: int
+    next_action: str
+    history: list[dict]
