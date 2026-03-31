@@ -9,8 +9,9 @@ from app.request_context import request_id_var
 from app.routers.analysis import router as analysis_router
 from app.routers.health import router as health_router
 from app.routers.rag import router as rag_router
-from app.services.rag_index_service import load_chunk_embeddings
 from app.routers import tools_demo, tools_loop_demo
+from app.services.rag_index_service import load_chunk_embeddings
+from app.services.retrievers.factory import build_retriever
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,7 +19,9 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Loading RAG index...")
-    app.state.rag_records = load_chunk_embeddings()
+    records = load_chunk_embeddings()
+    app.state.rag_records = records
+    app.state.retriever = build_retriever(records)
     logger.info("RAG index loaded")
 
     yield

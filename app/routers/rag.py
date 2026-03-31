@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 
 from app.agents.rag.response import build_langgraph_response
 from app.agents.rag.runtime import run_langgraph_agent, prepare_langgraph_stream
-from app.dependencies import get_rag_records
+from app.dependencies import get_rag_records, get_retriever
 from app.models import RagAnswerRequest, RagChunk, RagResponse, RagSearchRequest, RagSearchResponse
 from app.services.manual_agent_service import run_rag_agent
 from app.services.rag_index_service import ChunkEmbeddingRecord
@@ -67,20 +67,18 @@ async def stream_text_chunks(
 )
 async def rag_search(
     request: RagSearchRequest,
-    records: list[ChunkEmbeddingRecord] = Depends(get_rag_records),
+    retriever = Depends(get_retriever),
 ) -> RagSearchResponse:
     logger.info("Received /rag/search request: %s", request.question)
 
-    chunks = retrieve_top_chunks(
+    chunks = retriever.search(
         query=request.question,
-        records=records,
         top_k=request.top_k,
         title_filter=request.title_filter,
         doc_id_filter=request.doc_id_filter,
     )
 
     response_chunks = build_rag_chunks(chunks)
-
     return RagSearchResponse(chunks=response_chunks)
 
 

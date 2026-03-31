@@ -10,3 +10,10 @@ def get_rag_records(request: Request) -> list[ChunkEmbeddingRecord]:
         raise RuntimeError("RAG index is not loaded")
 
     return records
+
+
+def get_retriever(request: Request):
+    retriever = getattr(request.app.state, "retriever", None)
+    if retriever is None:
+        raise RuntimeError("Retriever is not initialized")
+    return retriever
