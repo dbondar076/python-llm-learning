@@ -18,6 +18,15 @@ STOPWORDS = {
     "and",
     "of",
     "in",
+    "used",
+    "about",
+    "tell",
+    "me",
+    "framework",
+    "language",
+    "ai",
+    "system",
+    "tool",
 }
 
 
@@ -103,11 +112,31 @@ def retrieve_top_chunks(
     return scored[:top_k]
 
 
-def should_answer(chunks: list[ScoredChunk], min_score: float = 0.52) -> bool:
+def should_answer(
+    query: str,
+    chunks: list[ScoredChunk],
+    min_score: float = 0.52,
+) -> bool:
     if not chunks:
         return False
 
-    return chunks[0]["score"] >= min_score
+    top_chunk = chunks[0]
+    top_score = top_chunk["score"]
+
+    if top_score < min_score:
+        return False
+
+    query_tokens = tokenize(query)
+
+    if not query_tokens:
+        return False
+
+    text_tokens = tokenize(top_chunk["text"])
+    title_tokens = tokenize(top_chunk["title"])
+
+    overlap = (query_tokens & text_tokens) | (query_tokens & title_tokens)
+
+    return len(overlap) >= 1
 
 
 def rerank_chunks(

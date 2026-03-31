@@ -1,0 +1,26 @@
+[
+  {
+    "name": "python_answerable",
+    "question": "What is Python used for?",
+    "expected_route": "answer",
+    "expected_keywords": ["web", "automation", "data"]
+  },
+  {
+    "name": "fastapi_answerable",
+    "question": "What is FastAPI?",
+    "expected_route": "answer",
+    "expected_keywords": ["framework", "api", "python"]
+  },
+  {
+    "name": "unknown_unanswerable",
+    "question": "What is Rust used for?",
+    "expected_route": "fallback",
+    "expected_keywords": []
+  },
+  {
+    "name": "invented_entity_unanswerable",
+    "question": "What is MoonScript Ultra AI Framework?",
+    "expected_route": "fallback",
+    "expected_keywords": []
+  }
+]
