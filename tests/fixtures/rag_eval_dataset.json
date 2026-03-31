@@ -1,0 +1,14 @@
+[
+  {
+    "question": "What is Python used for?",
+    "expected_keywords": ["web", "automation", "data"]
+  },
+  {
+    "question": "What is FastAPI?",
+    "expected_keywords": ["framework", "api", "python"]
+  },
+  {
+    "question": "What can Python be used for?",
+    "expected_keywords": ["web", "automation", "data"]
+  }
+]
