@@ -19,25 +19,37 @@ async def decide_node(state: ToolsLoopState) -> ToolsLoopState:
 
     if steps_taken >= max_steps:
         return {
+            "action_type": "finish",
             "selected_tool": "finish",
             "decision_reason": "Max steps reached",
             "tool_input": state["question"],
             "tool_arguments": {},
         }
 
-    decision = await decide_next_tool_with_llm(
+    action = await decide_next_tool_with_llm(
         question=state["question"],
         steps_taken=steps_taken,
         max_steps=max_steps,
         previous_tool_output=state.get("tool_output"),
     )
 
-    selected_tool = decision.tool
-    decision_reason = decision.reason
-    tool_arguments = dict(decision.arguments or {})
+    action_type = action.type
+    selected_tool = action.tool_name
+    decision_reason = action.reason
+    tool_arguments = dict(action.arguments or {})
 
-    if selected_tool != "finish" and not is_known_tool(selected_tool):
+    if action_type == "finish":
         return {
+            "action_type": "finish",
+            "selected_tool": "finish",
+            "decision_reason": decision_reason,
+            "tool_input": state["question"],
+            "tool_arguments": {},
+        }
+
+    if not is_known_tool(selected_tool):
+        return {
+            "action_type": "finish",
             "selected_tool": "finish",
             "decision_reason": "Unknown tool",
             "tool_input": state["question"],
@@ -51,6 +63,7 @@ async def decide_node(state: ToolsLoopState) -> ToolsLoopState:
 
     if not is_valid:
         selected_tool = "finish"
+        action_type = "finish"
         decision_reason = "Invalid tool arguments"
         tool_arguments = {}
     else:
@@ -58,7 +71,7 @@ async def decide_node(state: ToolsLoopState) -> ToolsLoopState:
 
     tool_input = state["question"]
 
-    if selected_tool == "calculator":
+    if selected_tool == "calculator" and action_type != "finish":
         expression = tool_arguments.get("expression")
 
         if not expression:
@@ -68,12 +81,14 @@ async def decide_node(state: ToolsLoopState) -> ToolsLoopState:
                 tool_input = extracted
             else:
                 selected_tool = "finish"
+                action_type = "finish"
                 decision_reason = "Could not determine calculator expression"
                 tool_arguments = {}
         else:
             tool_input = expression
 
     return {
+        "action_type": action_type,
         "selected_tool": selected_tool,
         "decision_reason": decision_reason,
         "tool_input": tool_input,

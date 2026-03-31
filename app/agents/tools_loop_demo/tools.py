@@ -3,7 +3,8 @@ import json
 import operator as op
 import re
 
-from app.agents.tools_loop_demo.schemas import ToolDecision
+from app.agents.tools_loop_demo.schemas import AgentAction
+from app.agents.tools_loop_demo.tool_definitions import TOOL_DEFINITIONS
 from app.agents.tools_loop_demo.tool_specs import TOOLS_SPECS
 from app.services.llm_service import run_text_prompt_with_retry_async
 from app.services.rag_retrieval_service import retrieve_top_chunks
@@ -120,15 +121,16 @@ def build_tools_examples_text() -> str:
 
     for name, config in TOOLS_SPECS.items():
         example = {
-            "tool": name,
+            "type": "tool_call",
+            "tool_name": name,
             "arguments": config.get("arguments_example", {}),
             "reason": "short reason",
         }
-
         parts.append(json.dumps(example, ensure_ascii=False))
 
     finish_example = {
-        "tool": "finish",
+        "type": "finish",
+        "tool_name": "finish",
         "arguments": {},
         "reason": "short reason",
     }
@@ -137,38 +139,55 @@ def build_tools_examples_text() -> str:
     return "\n".join(parts)
 
 
+def build_tool_definitions_text() -> str:
+    lines = []
+
+    for tool in TOOL_DEFINITIONS:
+        lines.append(
+            json.dumps(
+                {
+                    "name": tool["name"],
+                    "description": tool["description"],
+                    "input_schema": tool["input_schema"],
+                },
+                ensure_ascii=False,
+            )
+        )
+
+    return "\n".join(lines)
+
+
 async def decide_next_tool_with_llm(
     question: str,
     steps_taken: int,
     max_steps: int,
     previous_tool_output: str | None,
-) -> ToolDecision:
+) -> AgentAction:
     tools_description = build_tools_description_text()
     tools_examples = build_tools_examples_text()
+    tool_definitions = build_tool_definitions_text()
     tool_names = list(TOOLS_SPECS.keys())
 
-    allowed_routes = tool_names + ["finish"]
-    allowed_routes_text = "\n".join(f"- {name}" for name in allowed_routes)
+    allowed_tool_names = tool_names + ["finish"]
+    allowed_routes_text = "\n".join(f"- {name}" for name in allowed_tool_names)
 
     prompt = (
-        "You are a tool-loop routing assistant.\n"
-        "Decide the next action.\n\n"
+        "You are a function-calling style agent router.\n"
+        "Decide the next agent action.\n\n"
         "Return valid JSON with this shape:\n"
-        '{"tool": "<allowed tool name>", "arguments": {...}, "reason": "<short reason>"}\n\n'
+        '{"type": "<tool_call|finish>", "tool_name": "<allowed tool name>", "arguments": {...}, "reason": "<short reason>"}\n\n'
         "Allowed tool names:\n"
         f"{allowed_routes_text}\n\n"
-        "Available tools:\n"
+        "Tool definitions:\n"
+        f"{tool_definitions}\n\n"
+        "Available tools summary:\n"
         f"{tools_description}\n\n"
         "Examples of valid outputs:\n"
         f"{tools_examples}\n\n"
-        "Arguments rules:\n"
-        '- For calculator, return {"expression": "<math expression>"} when possible.\n'
-        '- For search_chunks, return {}.\n'
-        '- For list_docs, return {}.\n'
-        '- For finish, return {}.\n\n'
         "Rules:\n"
-        "- Use finish if enough information is already available or max steps are reached.\n"
-        "- Reason must be short.\n"
+        '- If another tool must be used, return {"type": "tool_call", ...}.\n'
+        '- If enough information is available or max steps are reached, return {"type": "finish", "tool_name": "finish", "arguments": {}, ...}.\n'
+        "- Arguments must match the selected tool input schema.\n"
         "- Return JSON only.\n\n"
         f"Question:\n{question}\n\n"
         f"Steps taken: {steps_taken}\n"
@@ -177,26 +196,36 @@ async def decide_next_tool_with_llm(
     )
 
     raw = await run_text_prompt_with_retry_async(prompt)
-    allowed = set(allowed_routes)
+    allowed = set(allowed_tool_names)
 
     try:
         data = json.loads(raw)
-        decision = ToolDecision.model_validate(data)
+        action = AgentAction.model_validate(data)
     except Exception:
-        return ToolDecision(
-            tool="finish",
+        return AgentAction(
+            type="finish",
+            tool_name="finish",
             arguments={},
             reason="Invalid model output",
         )
 
-    if decision.tool not in allowed:
-        return ToolDecision(
-            tool="finish",
+    if action.type not in {"tool_call", "finish"}:
+        return AgentAction(
+            type="finish",
+            tool_name="finish",
+            arguments={},
+            reason="Unknown action type",
+        )
+
+    if action.tool_name not in allowed:
+        return AgentAction(
+            type="finish",
+            tool_name="finish",
             arguments={},
             reason="Unknown tool",
         )
 
-    return decision
+    return action
 
 
 async def assess_whether_to_continue_with_llm(

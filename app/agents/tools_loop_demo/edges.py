@@ -1,14 +1,18 @@
-from app.agents.tools_loop_demo.registry import get_tool_node_name
 from app.agents.tools_loop_demo.state import ToolsLoopState
+from app.agents.tools_loop_demo.registry import is_known_tool
 
 
 def route_after_decide(state: ToolsLoopState) -> str:
+    action_type = state.get("action_type", "finish")
     selected_tool = state.get("selected_tool", "finish")
 
-    if selected_tool == "finish":
+    if action_type == "finish":
         return "finish"
 
-    return get_tool_node_name(selected_tool)
+    if action_type == "tool_call" and is_known_tool(selected_tool):
+        return "tool"
+
+    return "finish"
 
 
 def route_after_tool(state: ToolsLoopState) -> str:

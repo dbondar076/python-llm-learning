@@ -1,7 +1,7 @@
 import pytest
 
 from app.agents.tools_loop_demo.runtime import run_tools_loop_demo_agent
-from app.agents.tools_loop_demo.schemas import ToolDecision
+from app.agents.tools_loop_demo.schemas import AgentAction
 
 
 def build_fake_tool_configs() -> dict[str, dict]:
@@ -40,9 +40,10 @@ async def test_tools_loop_demo_agent_uses_calculator_and_finishes(
         steps_taken: int,
         max_steps: int,
         previous_tool_output: str | None,
-    ) -> ToolDecision:
-        return ToolDecision(
-            tool=decisions.pop(0),
+    ) -> AgentAction:
+        return AgentAction(
+            type="tool_call",
+            tool_name=decisions.pop(0),
             arguments={"expression": "2 + 2 * 5"},
             reason="test decision",
         )
@@ -94,9 +95,10 @@ async def test_tools_loop_demo_agent_two_steps(
         steps_taken: int,
         max_steps: int,
         previous_tool_output: str | None,
-    ) -> ToolDecision:
-        return ToolDecision(
-            tool=decisions.pop(0),
+    ) -> AgentAction:
+        return AgentAction(
+            type="tool_call",
+            tool_name=decisions.pop(0),
             arguments={},
             reason="test decision",
         )
@@ -166,9 +168,10 @@ async def test_tools_loop_demo_agent_accumulates_history(
         steps_taken: int,
         max_steps: int,
         previous_tool_output: str | None,
-    ) -> ToolDecision:
-        return ToolDecision(
-            tool=decisions.pop(0),
+    ) -> AgentAction:
+        return AgentAction(
+            type="tool_call",
+            tool_name=decisions.pop(0),
             arguments={"expression": "2 + 2 * 5"},
             reason="test decision",
         )
@@ -226,9 +229,10 @@ async def test_tools_loop_demo_agent_runs_multi_tool_chain(
         steps_taken: int,
         max_steps: int,
         previous_tool_output: str | None,
-    ) -> ToolDecision:
-        return ToolDecision(
-            tool=decisions.pop(0),
+    ) -> AgentAction:
+        return AgentAction(
+            type="tool_call",
+            tool_name=decisions.pop(0),
             arguments={},
             reason="test decision",
         )
@@ -313,9 +317,10 @@ async def test_tools_loop_demo_agent_uses_llm_assessment_to_finish(
         steps_taken: int,
         max_steps: int,
         previous_tool_output: str | None,
-    ) -> ToolDecision:
-        return ToolDecision(
-            tool=decisions.pop(0),
+    ) -> AgentAction:
+        return AgentAction(
+            type="tool_call",
+            tool_name=decisions.pop(0),
             arguments={},
             reason="test decision",
         )
