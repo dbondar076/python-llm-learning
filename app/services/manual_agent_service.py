@@ -82,14 +82,14 @@ async def route_question(state: AgentState) -> AgentState:
 
 async def retrieve_context(
     state: AgentState,
-    records: list[ChunkEmbeddingRecord],
+    retriever,
     top_k: int = RAG_TOP_K,
     title_filter: str | None = None,
     doc_id_filter: str | None = None,
 ) -> AgentState:
     top_chunks = await search_chunks_tool(
         question=state["question"],
-        records=records,
+        retriever=retriever,
         top_k=top_k,
         title_filter=title_filter,
         doc_id_filter=doc_id_filter,
@@ -182,7 +182,7 @@ def save_memory_if_needed(
 
 async def run_rag_agent(
     question: str,
-    records: list[ChunkEmbeddingRecord],
+    retriever,
     session_id: str | None = None,
     top_k: int = RAG_TOP_K,
     min_score: float = RAG_MIN_SCORE,
@@ -276,7 +276,7 @@ async def run_rag_agent(
 
     state = await retrieve_context(
         state=state,
-        records=records,
+        retriever=retriever,
         top_k=top_k,
         title_filter=title_filter,
         doc_id_filter=doc_id_filter,

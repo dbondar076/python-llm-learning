@@ -10,6 +10,7 @@ from app.services.rag_tools import (
     search_chunks_tool,
     generate_grounded_answer_tool,
 )
+from app.services.retrievers.factory import build_retriever
 from app.settings import RAG_TOP_K
 
 
@@ -57,14 +58,19 @@ async def clarify_node(state: GraphState) -> GraphState:
 
 
 async def retrieve_node(state: GraphState) -> GraphState:
+    retriever = build_retriever(state["records"])
+
     chunks = await search_chunks_tool(
         question=state["question"],
-        records=state["records"],
+        retriever=retriever,
         top_k=state.get("top_k", RAG_TOP_K),
         title_filter=state.get("title_filter"),
         doc_id_filter=state.get("doc_id_filter"),
     )
-    return {"top_chunks": chunks}
+
+    return {
+        "top_chunks": chunks,
+    }
 
 
 async def answer_node(state: GraphState) -> GraphState:

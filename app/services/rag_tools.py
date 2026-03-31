@@ -20,14 +20,13 @@ logger = logging.getLogger(__name__)
 
 async def search_chunks_tool(
     question: str,
-    records: list[ChunkEmbeddingRecord],
+    retriever,
     top_k: int = RAG_TOP_K,
     title_filter: str | None = None,
     doc_id_filter: str | None = None,
 ) -> list[ScoredChunk]:
-    return retrieve_top_chunks(
+    return retriever.search(
         query=question,
-        records=records,
         top_k=top_k,
         title_filter=title_filter,
         doc_id_filter=doc_id_filter,

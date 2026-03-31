@@ -7,12 +7,10 @@ from fastapi.responses import StreamingResponse
 
 from app.agents.rag.response import build_langgraph_response
 from app.agents.rag.runtime import run_langgraph_agent, prepare_langgraph_stream
-from app.dependencies import get_rag_records, get_retriever
+from app.dependencies import get_retriever, get_rag_records
 from app.models import RagAnswerRequest, RagChunk, RagResponse, RagSearchRequest, RagSearchResponse
 from app.services.manual_agent_service import run_rag_agent
 from app.services.rag_index_service import ChunkEmbeddingRecord
-from app.services.rag_retrieval_service import retrieve_top_chunks
-
 
 logger = logging.getLogger(__name__)
 
@@ -90,13 +88,13 @@ async def rag_search(
 )
 async def rag_answer(
     request: RagAnswerRequest,
-    records: list[ChunkEmbeddingRecord] = Depends(get_rag_records),
+    retriever = Depends(get_retriever),
 ) -> RagResponse:
     logger.info("Received /rag/answer request: %s", request.question)
 
     chunks, answer, meta = await run_rag_agent(
         question=request.question,
-        records=records,
+        retriever=retriever,
         session_id=request.session_id,
         top_k=request.top_k,
         min_score=request.min_score,
@@ -153,13 +151,13 @@ async def rag_answer_langgraph(
 )
 async def rag_answer_stream(
     request: RagAnswerRequest,
-    records: list[ChunkEmbeddingRecord] = Depends(get_rag_records),
+    retriever = Depends(get_retriever),
 ) -> StreamingResponse:
     logger.info("Received /rag/answer/stream request: %s", request.question)
 
     chunks, answer, meta = await run_rag_agent(
         question=request.question,
-        records=records,
+        retriever=retriever,
         session_id=request.session_id,
         top_k=request.top_k,
         min_score=request.min_score,
