@@ -10,6 +10,7 @@ from app.services.rag_tools import (
     search_chunks_tool,
     generate_grounded_answer_tool,
 )
+from app.services.rag_retrieval_service import compute_retrieval_confidence
 from app.services.retrievers.factory import build_retriever
 from app.settings import RAG_TOP_K
 
@@ -68,8 +69,14 @@ async def retrieve_node(state: GraphState) -> GraphState:
         doc_id_filter=state.get("doc_id_filter"),
     )
 
+    confidence = compute_retrieval_confidence(
+        query=state["question"],
+        chunks=chunks,
+    )
+
     return {
         "top_chunks": chunks,
+        "retrieval_confidence": confidence,
     }
 
 

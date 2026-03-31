@@ -16,3 +16,4 @@ class GraphState(MessagesState):
     min_score: float
     title_filter: str | None
     doc_id_filter: str | None
+    retrieval_confidence: float

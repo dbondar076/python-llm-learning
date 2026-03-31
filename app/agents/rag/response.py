@@ -12,6 +12,7 @@ def build_langgraph_meta(state: GraphState) -> dict:
         "resolved_question": state.get("question"),
         "top_score": top_score,
         "chunk_count": len(top_chunks),
+        "retrieval_confidence": state.get("retrieval_confidence", 0.0),
     }
 
 

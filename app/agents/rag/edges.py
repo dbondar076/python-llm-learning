@@ -24,14 +24,16 @@ def route_after_retrieval(state: GraphState) -> str:
     chunks = state.get("top_chunks", [])
     min_score = state.get("min_score", RAG_MIN_SCORE)
     query = state.get("question", "")
-
+    confidence = state.get("retrieval_confidence", 0.0)
     top_score = chunks[0]["score"] if chunks else None
+
     decision = should_answer(query, chunks, min_score=min_score)
 
     logger.info(
-        "RETRIEVAL route decision: chunk_count=%s top_score=%s min_score=%s decision=%s",
+        "RETRIEVAL route decision: chunk_count=%s top_score=%s confidence=%s min_score=%s decision=%s",
         len(chunks),
         top_score,
+        confidence,
         min_score,
         "answer" if decision else "fallback",
     )

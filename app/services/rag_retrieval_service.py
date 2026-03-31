@@ -112,6 +112,54 @@ def retrieve_top_chunks(
     return scored[:top_k]
 
 
+def has_meaningful_overlap(query: str, chunks: list[ScoredChunk]) -> bool:
+    if not chunks:
+        return False
+
+    query_tokens = tokenize(query)
+    if not query_tokens:
+        return False
+
+    top_chunk = chunks[0]
+    text_tokens = tokenize(top_chunk["text"])
+    title_tokens = tokenize(top_chunk["title"])
+
+    overlap = query_tokens & (text_tokens | title_tokens)
+    return len(overlap) > 0
+
+
+def compute_retrieval_confidence(
+    query: str,
+    chunks: list[ScoredChunk],
+) -> float:
+    if not chunks:
+        return 0.0
+
+    top_chunk = chunks[0]
+    top_score = float(top_chunk["score"])
+
+    query_tokens = tokenize(query)
+    if not query_tokens:
+        return 0.0
+
+    text_tokens = tokenize(top_chunk["text"])
+    title_tokens = tokenize(top_chunk["title"])
+
+    text_overlap = query_tokens & text_tokens
+    title_overlap = query_tokens & title_tokens
+
+    overlap_bonus = 0.0
+
+    if text_overlap:
+        overlap_bonus += 0.15
+
+    if title_overlap:
+        overlap_bonus += 0.10
+
+    confidence = top_score + overlap_bonus
+    return min(confidence, 1.0)
+
+
 def should_answer(
     query: str,
     chunks: list[ScoredChunk],
@@ -120,23 +168,15 @@ def should_answer(
     if not chunks:
         return False
 
-    top_chunk = chunks[0]
-    top_score = top_chunk["score"]
+    confidence = compute_retrieval_confidence(query, chunks)
 
-    if top_score < min_score:
-        return False
+    if confidence >= 0.55:
+        return True
 
-    query_tokens = tokenize(query)
+    if confidence >= min_score and has_meaningful_overlap(query, chunks):
+        return True
 
-    if not query_tokens:
-        return False
-
-    text_tokens = tokenize(top_chunk["text"])
-    title_tokens = tokenize(top_chunk["title"])
-
-    overlap = (query_tokens & text_tokens) | (query_tokens & title_tokens)
-
-    return len(overlap) >= 1
+    return False
 
 
 def rerank_chunks(
