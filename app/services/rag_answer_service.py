@@ -2,12 +2,10 @@ import re
 from typing import TypedDict
 
 from app.settings import RAG_MIN_SCORE, RAG_TOP_K
-from app.services.llm_service import run_text_prompt_with_retry_async
-from app.services.rag_index_service import ChunkEmbeddingRecord
 from app.services.rag_retrieval_service import (
     ScoredChunk,
-    should_answer,
     retrieve_top_chunks_with_rerank,
+    compute_retrieval_confidence,
 )
 
 NO_ANSWER = "I don't know based on the provided context."
@@ -132,12 +130,13 @@ def build_rag_prompt(question: str, context: str) -> str:
 
 async def answer_with_rag(
     question: str,
-    records: list[ChunkEmbeddingRecord],
+    records,
     top_k: int = RAG_TOP_K,
     min_score: float = RAG_MIN_SCORE,
     title_filter: str | None = None,
     doc_id_filter: str | None = None,
-) -> tuple[list[ScoredChunk], str]:
+):
+    # 1. Retrieval + rerank
     top_chunks = retrieve_top_chunks_with_rerank(
         query=question,
         records=records,
@@ -147,12 +146,31 @@ async def answer_with_rag(
         initial_k=max(10, top_k),
     )
 
-    if not should_answer(question, top_chunks, min_score=min_score):
+    if not top_chunks:
         return top_chunks, NO_ANSWER
 
-    merged_chunks = merge_adjacent_chunks(top_chunks)
-    context = build_context(merged_chunks)
-    prompt = build_rag_prompt(question, context)
+    # 2. Confidence (фикс false clarify)
+    confidence = compute_retrieval_confidence(question, top_chunks)
+
+    # ВАЖНО: более мягкий порог
+    if confidence < min_score:
+        return top_chunks, NO_ANSWER
+
+    # 3. Собираем контекст
+    context = "\n\n".join(chunk["text"] for chunk in top_chunks)
+
+    # 4. Генерация ответа
+    from app.services.llm_service import run_text_prompt_with_retry_async
+
+    prompt = (
+        "Answer the user's question using only the provided context.\n"
+        "If the answer is not in the context, say exactly: I don't know based on the provided context.\n"
+        "Do not guess.\n"
+        "Be concise.\n\n"
+        f"Context:\n{context}\n\n"
+        f"Question:\n{question}"
+    )
+
     answer = await run_text_prompt_with_retry_async(prompt)
 
     return top_chunks, answer
