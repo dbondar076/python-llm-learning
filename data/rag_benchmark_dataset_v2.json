@@ -1,0 +1,139 @@
+{
+  "documents": [
+    {
+      "doc_id": "movie_solar_drift",
+      "title": "Movie: Solar Drift",
+      "text": "Solar Drift is a science fiction film. Director: Anna Kovacs. Lead actor: Lena Hart. Genre: science fiction."
+    },
+    {
+      "doc_id": "movie_glass_harbor",
+      "title": "Movie: Glass Harbor",
+      "text": "Glass Harbor is a mystery drama film. Director: Thomas Vale. Genre: mystery drama."
+    },
+    {
+      "doc_id": "movie_moonline_echo",
+      "title": "Movie: Moonline Echo",
+      "text": "Moonline Echo is a reflective indie film. Director: Pavel Orlov. Genre: indie drama."
+    },
+    {
+      "doc_id": "movie_neon_skies",
+      "title": "Movie: Neon Skies",
+      "text": "Neon Skies is a cyberpunk thriller film. Director: Mira Chen. Genre: cyberpunk thriller."
+    },
+    {
+      "doc_id": "watchlist_personal",
+      "title": "Personal Watchlist",
+      "text": "Personal watchlist order: 1. Silent Orbit. 2. Solar Drift. 3. Ember Falls. 4. Glass Harbor. 5. Moonline Echo."
+    },
+    {
+      "doc_id": "books_favorites",
+      "title": "Favorite Books",
+      "text": "Favorite books list: Dune, Foundation, Hyperion, The Left Hand of Darkness."
+    },
+    {
+      "doc_id": "travel_notes_europe",
+      "title": "Travel Notes",
+      "text": "Travel notes mention these cities: Lisbon, Kyoto, Reykjavik."
+    },
+    {
+      "doc_id": "noise_random_1",
+      "title": "Office Notes",
+      "text": "Office notes: buy batteries, clean desk, prepare weekly summary, review invoices."
+    },
+    {
+      "doc_id": "noise_random_2",
+      "title": "Cooking Notes",
+      "text": "Cooking notes: tomato soup, sourdough bread, roasted carrots, lemon pasta."
+    }
+  ],
+  "cases": [
+    {
+      "name": "watchlist_first_item",
+      "question": "According to the watchlist document, what movie is first?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["silent orbit"]
+    },
+    {
+      "name": "watchlist_third_item",
+      "question": "According to the watchlist document, what movie is third?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["ember falls"]
+    },
+    {
+      "name": "watchlist_last_item",
+      "question": "According to the watchlist document, what movie is last?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["moonline echo"]
+    },
+    {
+      "name": "director_known_movie_1",
+      "question": "Who directed Solar Drift?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["anna kovacs"]
+    },
+    {
+      "name": "director_known_movie_2",
+      "question": "Who directed Glass Harbor?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["thomas vale"]
+    },
+    {
+      "name": "director_known_movie_3",
+      "question": "Who directed Moonline Echo?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["pavel orlov"]
+    },
+    {
+      "name": "actor_known_movie",
+      "question": "Who stars in Solar Drift?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["lena hart"]
+    },
+    {
+      "name": "favorite_books_question",
+      "question": "According to the books document, name one favorite book.",
+      "expected_route": "answer",
+      "expected_answer_contains_any": [
+        "dune",
+        "foundation",
+        "hyperion",
+        "the left hand of darkness"
+      ]
+    },
+    {
+      "name": "travel_destination_question",
+      "question": "According to the travel notes, which city is mentioned?",
+      "expected_route": "answer",
+      "expected_answer_contains_any": [
+        "lisbon",
+        "kyoto",
+        "reykjavik"
+      ]
+    },
+    {
+      "name": "missing_movie_rating",
+      "question": "What rating does Solar Drift have?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "missing_movie_budget",
+      "question": "What budget did Neon Skies have?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "unknown_movie_director",
+      "question": "Who directed Galactic War 3000?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "invented_entity_question",
+      "question": "What is MoonScript Ultra AI Framework?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "unknown_book_author",
+      "question": "Who wrote Desert of Mirrors?",
+      "expected_route": "fallback"
+    }
+  ]
+}

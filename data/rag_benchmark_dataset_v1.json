@@ -1,0 +1,115 @@
+{
+  "documents": [
+    {
+      "doc_id": "movies_2026",
+      "title": "New Movies 2026",
+      "text": "Solar Drift is a science fiction film directed by Anna Kovacs. Neon Skies is a cyberpunk thriller directed by Mark Liu. The Last Horizon is a space drama directed by Sofia Mendes. Ember Falls is a fantasy adventure directed by Daniel Rowe. Silent Orbit is a mystery sci-fi film directed by Irene Novak. Glass Harbor is a detective drama directed by Thomas Vale. Iron Bloom is a dystopian feature directed by Rachel Kim. Moonline Echo is an experimental sci-fi film directed by Pavel Orlov."
+    },
+    {
+      "doc_id": "movies_details",
+      "title": "Movie Details",
+      "text": "Solar Drift stars Lena Hart and Ivan Petrov. Neon Skies stars Maya Chen. The Last Horizon stars Olivia Stone. Ember Falls stars Noah Reid. Silent Orbit stars Eliza Moore. Glass Harbor stars Victor Hale. Iron Bloom stars Sara Nordin. Moonline Echo stars Anton Belik."
+    },
+    {
+      "doc_id": "watchlist_personal",
+      "title": "Personal Watchlist",
+      "text": "My personal watchlist for this season is: 1. Silent Orbit 2. Solar Drift 3. Ember Falls 4. Glass Harbor 5. Neon Skies 6. The Last Horizon 7. Iron Bloom 8. Moonline Echo."
+    },
+    {
+      "doc_id": "books_favorites",
+      "title": "Favorite Books",
+      "text": "Favorite books include Dune by Frank Herbert, Foundation by Isaac Asimov, Hyperion by Dan Simmons, and The Left Hand of Darkness by Ursula K. Le Guin."
+    },
+    {
+      "doc_id": "travel_notes",
+      "title": "Travel Notes",
+      "text": "I want to visit Lisbon, Kyoto, and Reykjavik next year. Lisbon is known for trams, Kyoto for temples, and Reykjavik for geothermal spas."
+    },
+    {
+      "doc_id": "random_notes",
+      "title": "Random Notes",
+      "text": "Bananas are yellow. Mechanical keyboards can sound very different depending on switches. Rainy days are good for reading."
+    }
+  ],
+  "questions": [
+    {
+      "name": "watchlist_first_item",
+      "question": "What movie is first in the personal watchlist?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["silent orbit"]
+    },
+    {
+      "name": "watchlist_third_item",
+      "question": "What movie is third in the personal watchlist?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["ember falls"]
+    },
+    {
+      "name": "watchlist_last_item",
+      "question": "What movie is last in the personal watchlist?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["moonline echo"]
+    },
+    {
+      "name": "director_known_movie_1",
+      "question": "Who directed Solar Drift?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["anna kovacs"]
+    },
+    {
+      "name": "director_known_movie_2",
+      "question": "Who directed Glass Harbor?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["thomas vale"]
+    },
+    {
+      "name": "director_known_movie_3",
+      "question": "Who directed Moonline Echo?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["pavel orlov"]
+    },
+    {
+      "name": "actor_known_movie",
+      "question": "Who stars in Solar Drift?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["lena hart"]
+    },
+    {
+      "name": "favorite_books_question",
+      "question": "Name one of the favorite books.",
+      "expected_route": "answer",
+      "expected_answer_contains_any": ["dune", "foundation", "hyperion", "the left hand of darkness"]
+    },
+    {
+      "name": "travel_destination_question",
+      "question": "Which cities are in the travel notes?",
+      "expected_route": "answer",
+      "expected_answer_contains_any": ["lisbon", "kyoto", "reykjavik"]
+    },
+    {
+      "name": "missing_movie_rating",
+      "question": "What rating does Solar Drift have?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "missing_movie_budget",
+      "question": "What budget did Neon Skies have?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "unknown_movie_director",
+      "question": "Who directed Galactic War 3000?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "invented_entity_question",
+      "question": "What is MoonScript Ultra AI Framework?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "unknown_book_author",
+      "question": "Who wrote Snow Crash?",
+      "expected_route": "fallback"
+    }
+  ]
+}

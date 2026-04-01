@@ -1,0 +1,124 @@
+{
+  "documents": [
+    {
+      "doc_id": "doc_watchlist_v3",
+      "title": "Personal Watchlist",
+      "text": "This is the personal watchlist document. The first movie in the personal watchlist is Silent Orbit. The second movie in the personal watchlist is Solar Drift. The third movie in the personal watchlist is Ember Falls. The fourth movie in the personal watchlist is Glass Harbor. The fifth and last movie in the personal watchlist is Moonline Echo."
+    },
+    {
+      "doc_id": "doc_movies_v3",
+      "title": "Movie Facts",
+      "text": "Solar Drift is a movie. Solar Drift was directed by Anna Kovacs. The lead actor in Solar Drift is Lena Hart. Solar Drift is a science fiction movie. Glass Harbor is a movie. Glass Harbor was directed by Thomas Vale. The lead actor in Glass Harbor is Nora Blythe. Glass Harbor is a mystery drama movie. Moonline Echo is a movie. Moonline Echo was directed by Pavel Orlov. The lead actor in Moonline Echo is Iris Dane. Moonline Echo is a futuristic drama movie. Neon Skies is a movie. Neon Skies was directed by Mara Chen. The lead actor in Neon Skies is Owen Reed. Neon Skies is an adventure movie."
+    },
+    {
+      "doc_id": "doc_books_v3",
+      "title": "Favorite Books",
+      "text": "This is the favorite books document. One favorite book is Dune. Another favorite book is Foundation. Another favorite book is Hyperion. Another favorite book is The Left Hand of Darkness."
+    },
+    {
+      "doc_id": "doc_travel_v3",
+      "title": "Travel Notes",
+      "text": "This is the travel notes document. The travel notes mention the city Lisbon. The travel notes mention the city Kyoto. The travel notes mention the city Reykjavik."
+    },
+    {
+      "doc_id": "doc_noise_1_v3",
+      "title": "Random Office Notes",
+      "text": "Office reminders: buy printer paper, schedule a team sync, update the sprint board, and clean the coffee machine."
+    },
+    {
+      "doc_id": "doc_noise_2_v3",
+      "title": "Grocery List",
+      "text": "Buy apples, oranges, rice, yogurt, tea, and dark chocolate."
+    }
+  ],
+  "cases": [
+    {
+      "name": "watchlist_first_item",
+      "question": "What is the first movie in the personal watchlist?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["silent orbit"]
+    },
+    {
+      "name": "watchlist_third_item",
+      "question": "What is the third movie in the personal watchlist?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["ember falls"]
+    },
+    {
+      "name": "watchlist_last_item",
+      "question": "What is the last movie in the personal watchlist?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["moonline echo"]
+    },
+    {
+      "name": "director_known_movie_1",
+      "question": "Who directed the movie Solar Drift?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["anna kovacs"]
+    },
+    {
+      "name": "director_known_movie_2",
+      "question": "Who directed the movie Glass Harbor?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["thomas vale"]
+    },
+    {
+      "name": "director_known_movie_3",
+      "question": "Who directed the movie Moonline Echo?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["pavel orlov"]
+    },
+    {
+      "name": "actor_known_movie",
+      "question": "Who is the lead actor in the movie Solar Drift?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["lena hart"]
+    },
+    {
+      "name": "favorite_books_question",
+      "question": "Name one favorite book from the favorite books document.",
+      "expected_route": "answer",
+      "expected_answer_contains_any": [
+        "dune",
+        "foundation",
+        "hyperion",
+        "the left hand of darkness"
+      ]
+    },
+    {
+      "name": "travel_destination_question",
+      "question": "Name one city mentioned in the travel notes document.",
+      "expected_route": "answer",
+      "expected_answer_contains_any": [
+        "lisbon",
+        "kyoto",
+        "reykjavik"
+      ]
+    },
+    {
+      "name": "missing_movie_rating",
+      "question": "What rating does the movie Solar Drift have?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "missing_movie_budget",
+      "question": "What budget did the movie Neon Skies have?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "unknown_movie_director",
+      "question": "Who directed the movie Galactic War 3000?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "invented_entity_question",
+      "question": "What is MoonScript Ultra AI Framework?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "unknown_book_author",
+      "question": "Who wrote the book Snow Planet Rising?",
+      "expected_route": "fallback"
+    }
+  ]
+}
