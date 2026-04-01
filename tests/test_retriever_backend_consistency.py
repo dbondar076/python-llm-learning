@@ -2,18 +2,19 @@ import pytest
 
 from app.services.benchmark_chunked_records_service import build_chunked_records_from_documents
 from tests.test_rag_benchmark_dataset_v3_chunked import load_benchmark_dataset_v3
-from app.services.rag_retrieval_service import retrieve_top_chunks
+from app.services.rag_retrieval_service import retrieve_top_chunks_with_rerank
 
 
 def retrieve_top_chunks_for_test(
     question: str,
     records: list[dict],
     top_k: int = 3,
-):
-    return retrieve_top_chunks(
+) -> list[dict]:
+    return retrieve_top_chunks_with_rerank(
         query=question,
         records=records,
         top_k=top_k,
+        initial_k=10,
     )
 
 

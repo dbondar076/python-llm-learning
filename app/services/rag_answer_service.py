@@ -4,8 +4,11 @@ from typing import TypedDict
 from app.settings import RAG_MIN_SCORE, RAG_TOP_K
 from app.services.llm_service import run_text_prompt_with_retry_async
 from app.services.rag_index_service import ChunkEmbeddingRecord
-from app.services.rag_retrieval_service import ScoredChunk, retrieve_top_chunks, should_answer
-
+from app.services.rag_retrieval_service import (
+    ScoredChunk,
+    should_answer,
+    retrieve_top_chunks_with_rerank,
+)
 
 NO_ANSWER = "I don't know based on the provided context."
 
@@ -135,15 +138,16 @@ async def answer_with_rag(
     title_filter: str | None = None,
     doc_id_filter: str | None = None,
 ) -> tuple[list[ScoredChunk], str]:
-    top_chunks = retrieve_top_chunks(
+    top_chunks = retrieve_top_chunks_with_rerank(
         query=question,
         records=records,
         top_k=top_k,
         title_filter=title_filter,
         doc_id_filter=doc_id_filter,
+        initial_k=max(10, top_k),
     )
 
-    if not should_answer(top_chunks, min_score=min_score):
+    if not should_answer(question, top_chunks, min_score=min_score):
         return top_chunks, NO_ANSWER
 
     merged_chunks = merge_adjacent_chunks(top_chunks)
