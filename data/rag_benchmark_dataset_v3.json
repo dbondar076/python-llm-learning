@@ -34,48 +34,114 @@
   "cases": [
     {
       "name": "watchlist_first_item",
+      "category": "answerable_exact",
       "question": "What is the first movie in the personal watchlist?",
       "expected_route": "answer",
       "expected_answer_contains": ["silent orbit"]
     },
     {
       "name": "watchlist_third_item",
+      "category": "answerable_exact",
       "question": "What is the third movie in the personal watchlist?",
       "expected_route": "answer",
       "expected_answer_contains": ["ember falls"]
     },
     {
       "name": "watchlist_last_item",
+      "category": "answerable_exact",
       "question": "What is the last movie in the personal watchlist?",
       "expected_route": "answer",
       "expected_answer_contains": ["moonline echo"]
     },
     {
+      "name": "watchlist_first_item_paraphrase",
+      "category": "answerable_paraphrased",
+      "question": "Which title appears first in the personal watchlist?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["silent orbit"]
+    },
+    {
+      "name": "watchlist_last_item_paraphrase",
+      "category": "answerable_paraphrased",
+      "question": "Which movie is listed at the end of the personal watchlist?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["moonline echo"]
+    },
+    {
+      "name": "director_solar_drift_paraphrase",
+      "category": "answerable_paraphrased",
+      "question": "Who is the director of Solar Drift?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["anna kovacs"]
+    },
+    {
+      "name": "director_glass_harbor_paraphrase",
+      "category": "answerable_paraphrased",
+      "question": "Who is the director of Glass Harbor?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["thomas vale"]
+    },
+    {
+      "name": "actor_solar_drift_paraphrase",
+      "category": "answerable_paraphrased",
+      "question": "Which actor stars in Solar Drift?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["lena hart"]
+    },
+    {
+      "name": "favorite_books_paraphrase",
+      "category": "answerable_paraphrased",
+      "question": "Mention one book from the favorite books notes.",
+      "expected_route": "answer",
+      "expected_answer_contains_any": [
+        "dune",
+        "foundation",
+        "hyperion",
+        "the left hand of darkness"
+      ]
+    },
+    {
+      "name": "travel_notes_paraphrase",
+      "category": "answerable_paraphrased",
+      "question": "Name a destination city from the travel notes.",
+      "expected_route": "answer",
+      "expected_answer_contains_any": [
+        "lisbon",
+        "kyoto",
+        "reykjavik"
+      ]
+    },
+    {
       "name": "director_known_movie_1",
+      "category": "answerable_exact",
       "question": "Who directed the movie Solar Drift?",
       "expected_route": "answer",
       "expected_answer_contains": ["anna kovacs"]
     },
     {
       "name": "director_known_movie_2",
+      "category": "answerable_exact",
       "question": "Who directed the movie Glass Harbor?",
       "expected_route": "answer",
       "expected_answer_contains": ["thomas vale"]
     },
     {
       "name": "director_known_movie_3",
+      "category": "answerable_exact",
       "question": "Who directed the movie Moonline Echo?",
       "expected_route": "answer",
       "expected_answer_contains": ["pavel orlov"]
     },
     {
       "name": "actor_known_movie",
+      "category": "answerable_exact",
       "question": "Who is the lead actor in the movie Solar Drift?",
       "expected_route": "answer",
       "expected_answer_contains": ["lena hart"]
     },
     {
       "name": "favorite_books_question",
+      "category": "answerable_exact",
       "question": "Name one favorite book from the favorite books document.",
       "expected_route": "answer",
       "expected_answer_contains_any": [
@@ -87,6 +153,7 @@
     },
     {
       "name": "travel_destination_question",
+      "category": "answerable_exact",
       "question": "Name one city mentioned in the travel notes document.",
       "expected_route": "answer",
       "expected_answer_contains_any": [
@@ -96,28 +163,118 @@
       ]
     },
     {
+      "name": "watchlist_generic_first",
+      "category": "ambiguous_local",
+      "question": "What is the first movie in the watchlist?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["silent orbit"]
+    },
+    {
+      "name": "watchlist_generic_last",
+      "category": "ambiguous_local",
+      "question": "What is the last movie in the watchlist?",
+      "expected_route": "answer",
+      "expected_answer_contains": ["moonline echo"]
+    },
+    {
+      "name": "books_generic_one",
+      "category": "ambiguous_local",
+      "question": "Name one book from the books document.",
+      "expected_route": "answer",
+      "expected_answer_contains_any": [
+        "dune",
+        "foundation",
+        "hyperion",
+        "the left hand of darkness"
+      ]
+    },
+    {
+      "name": "travel_generic_one_city",
+      "category": "ambiguous_local",
+      "question": "Name one city from the travel document.",
+      "expected_route": "answer",
+      "expected_answer_contains_any": [
+        "lisbon",
+        "kyoto",
+        "reykjavik"
+      ]
+    },
+    {
       "name": "missing_movie_rating",
+      "category": "unanswerable_missing_field",
       "question": "What rating does the movie Solar Drift have?",
       "expected_route": "fallback"
     },
     {
       "name": "missing_movie_budget",
+      "category": "unanswerable_missing_field",
       "question": "What budget did the movie Neon Skies have?",
       "expected_route": "fallback"
     },
     {
       "name": "unknown_movie_director",
+      "category": "unanswerable_missing_field",
       "question": "Who directed the movie Galactic War 3000?",
       "expected_route": "fallback"
     },
     {
       "name": "invented_entity_question",
+      "category": "unanswerable_missing_field",
       "question": "What is MoonScript Ultra AI Framework?",
       "expected_route": "fallback"
     },
     {
       "name": "unknown_book_author",
+      "category": "unanswerable_missing_field",
       "question": "Who wrote the book Snow Planet Rising?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "solar_drift_rating_missing",
+      "category": "unanswerable_missing_field",
+      "question": "What rating does Solar Drift have?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "solar_drift_budget_missing",
+      "category": "unanswerable_missing_field",
+      "question": "What budget did Solar Drift have?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "glass_harbor_budget_missing",
+      "category": "unanswerable_missing_field",
+      "question": "What was the budget of Glass Harbor?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "neon_skies_budget_missing",
+      "category": "unanswerable_missing_field",
+      "question": "What budget did Neon Skies have?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "unknown_movie_director_2",
+      "category": "unanswerable_missing_entity",
+      "question": "Who directed Star Horizon 9?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "unknown_movie_actor",
+      "category": "unanswerable_missing_entity",
+      "question": "Who starred in Crimson Nebula?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "unknown_book_author_2",
+      "category": "unanswerable_missing_entity",
+      "question": "Who wrote The Ice Crown Protocol?",
+      "expected_route": "fallback"
+    },
+    {
+      "name": "unknown_travel_city",
+      "category": "unanswerable_missing_entity",
+      "question": "Is Tallinn mentioned in the travel notes?",
       "expected_route": "fallback"
     }
   ]
