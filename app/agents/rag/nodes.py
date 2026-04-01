@@ -93,6 +93,15 @@ async def answer_node(state: GraphState) -> GraphState:
     messages = list(state.get("messages", []))
     messages.append(AIMessage(content=answer))
 
+    normalized_answer = (answer or "").strip()
+
+    if normalized_answer == NO_ANSWER:
+        return {
+            "answer": NO_ANSWER,
+            "route": "fallback",
+            "messages": messages,
+        }
+
     return {
         "answer": answer,
         "route": "answer",
