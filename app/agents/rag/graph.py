@@ -3,7 +3,14 @@ from langgraph.constants import START, END
 from langgraph.graph import StateGraph
 
 from app.agents.rag.edges import route_after_router, route_after_retrieval
-from app.agents.rag.nodes import route_node, direct_node, clarify_node, retrieve_node, answer_node, fallback_node
+from app.agents.rag.nodes import (
+    route_node,
+    direct_node,
+    clarify_node,
+    retrieve_node,
+    answer_node,
+    fallback_node,
+)
 from app.agents.rag.state import GraphState
 
 
@@ -28,7 +35,6 @@ def build_agent_graph():
         route_after_router,
         {
             "direct": "direct",
-            "clarify": "clarify",
             "retrieve": "retrieve",
         },
     )

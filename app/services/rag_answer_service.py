@@ -4,8 +4,8 @@ from typing import TypedDict
 from app.settings import RAG_MIN_SCORE, RAG_TOP_K
 from app.services.rag_retrieval_service import (
     ScoredChunk,
-    retrieve_top_chunks_with_rerank,
     compute_retrieval_confidence,
+    retrieve_top_chunks_multi_query,
 )
 
 NO_ANSWER = "I don't know based on the provided context."
@@ -137,13 +137,13 @@ async def answer_with_rag(
     doc_id_filter: str | None = None,
 ):
     # 1. Retrieval + rerank
-    top_chunks = retrieve_top_chunks_with_rerank(
+    top_chunks = retrieve_top_chunks_multi_query(
         query=question,
         records=records,
         top_k=top_k,
         title_filter=title_filter,
         doc_id_filter=doc_id_filter,
-        initial_k=max(10, top_k),
+        per_query_k=max(10, top_k),
     )
 
     if not top_chunks:
