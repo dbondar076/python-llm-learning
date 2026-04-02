@@ -1,8 +1,9 @@
 import pytest
 
 from app.services.benchmark_chunked_records_service import build_chunked_records_from_documents
-from tests.test_rag_benchmark_dataset_v3_chunked import load_benchmark_dataset_v3
+from app.services.rag_eval_service import compute_retrieval_metrics
 from app.services.rag_retrieval_service import retrieve_top_chunks_with_rerank
+from tests.test_rag_benchmark_dataset_v3_chunked import load_benchmark_dataset_v3
 
 
 def retrieve_top_chunks_for_test(
@@ -106,7 +107,6 @@ def test_retriever_returns_expected_document(case: dict) -> None:
     top_1 = top_chunks[0]
     top_1_doc_id = top_1.get("doc_id")
     top_1_score = top_1.get("score", 0.0)
-    top_1_text = (top_1.get("text") or "").lower()
 
     all_doc_ids = [chunk.get("doc_id") for chunk in top_chunks]
 
@@ -168,12 +168,69 @@ def test_retriever_average_top1_score_on_answerable_cases() -> None:
     )
 
 
+def test_retriever_relevance_metrics() -> None:
+    dataset = load_benchmark_dataset_v3()
+    records = build_chunked_records_from_documents(dataset["documents"])
+
+    cases = [
+        case
+        for case in dataset["cases"]
+        if case.get("relevant_doc_ids")
+    ]
+
+    assert cases, "No cases with relevant_doc_ids found in dataset."
+
+    hit_scores: list[float] = []
+    reciprocal_ranks: list[float] = []
+    top1_scores: list[float] = []
+
+    for case in cases:
+        top_chunks = retrieve_top_chunks_for_test(
+            question=case["question"],
+            records=records,
+            top_k=3,
+        )
+
+        assert top_chunks, f"No chunks returned for question: {case['question']}"
+
+        metrics = compute_retrieval_metrics(
+            top_chunks=top_chunks,
+            relevant_doc_ids=case["relevant_doc_ids"],
+        )
+
+        hit_scores.append(metrics["hit_at_k"])
+        reciprocal_ranks.append(metrics["reciprocal_rank"])
+        top1_scores.append(top_chunks[0].get("score", 0.0))
+
+    hit_at_3_value = sum(hit_scores) / len(hit_scores)
+    mrr_value = sum(reciprocal_ranks) / len(reciprocal_ranks)
+    avg_top1_score = sum(top1_scores) / len(top1_scores)
+
+    assert hit_at_3_value >= 0.95, (
+        f"Hit@3 is too low: {hit_at_3_value:.4f}"
+    )
+
+    assert mrr_value >= 0.85, (
+        f"MRR is too low: {mrr_value:.4f}"
+    )
+
+    assert avg_top1_score >= 0.45, (
+        f"Average top-1 retrieval score is too low: {avg_top1_score:.4f}"
+    )
+
+
+@pytest.mark.debug
+@pytest.mark.skip(reason="debug-only test")
 def test_debug_single_question() -> None:
     dataset = load_benchmark_dataset_v3()
     records = build_chunked_records_from_documents(dataset["documents"])
 
     question = "Who directed the movie Solar Drift?"
-    top_chunks = retrieve_top_chunks_for_test(question=question, records=records, top_k=1)
+    top_chunks = retrieve_top_chunks_for_test(
+        question=question,
+        records=records,
+        top_k=1,
+    )
 
     chunk = top_chunks[0]
     print(type(chunk))
