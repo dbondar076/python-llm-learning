@@ -1,7 +1,7 @@
 import pytest
 
 from app.services.benchmark_chunked_records_service import build_chunked_records_from_documents
-from app.services.rag_eval_service import compute_retrieval_metrics
+from app.services.rag_eval_service import compute_retrieval_metrics, summarize_metric
 from app.services.rag_retrieval_service import retrieve_top_chunks_with_rerank
 from tests.test_rag_benchmark_dataset_v3_chunked import load_benchmark_dataset_v3
 
@@ -216,6 +216,56 @@ def test_retriever_relevance_metrics() -> None:
 
     assert avg_top1_score >= 0.45, (
         f"Average top-1 retrieval score is too low: {avg_top1_score:.4f}"
+    )
+
+
+@pytest.mark.debug
+def test_print_retriever_metrics_report() -> None:
+    dataset = load_benchmark_dataset_v3()
+    records = build_chunked_records_from_documents(dataset["documents"])
+
+    hit_scores: list[float] = []
+    rr_scores: list[float] = []
+
+    for case in RETRIEVAL_CASES:
+        top_chunks = retrieve_top_chunks_for_test(
+            question=case["question"],
+            records=records,
+            top_k=3,
+        )
+
+        metrics = compute_retrieval_metrics(
+            top_chunks=top_chunks,
+            relevant_doc_ids=case["expected_doc_id"],
+        )
+
+        hit_scores.append(metrics["hit_at_k"])
+        rr_scores.append(metrics["reciprocal_rank"])
+
+        top_1 = top_chunks[0] if top_chunks else {}
+
+        print(
+            f"{case['name']}: "
+            f"hit@3={metrics['hit_at_k']:.2f}, "
+            f"rr={metrics['reciprocal_rank']:.2f}, "
+            f"top1_doc={top_1.get('doc_id')}, "
+            f"top1_score={top_1.get('score', 0.0):.4f}"
+        )
+
+    hit_summary = summarize_metric(hit_scores)
+    rr_summary = summarize_metric(rr_scores)
+
+    print()
+    print("=== Retrieval metrics summary ===")
+    print(
+        f"hit@3 -> avg={hit_summary['avg']:.4f}, "
+        f"min={hit_summary['min']:.4f}, "
+        f"max={hit_summary['max']:.4f}"
+    )
+    print(
+        f"mrr    -> avg={rr_summary['avg']:.4f}, "
+        f"min={rr_summary['min']:.4f}, "
+        f"max={rr_summary['max']:.4f}"
     )
 
 

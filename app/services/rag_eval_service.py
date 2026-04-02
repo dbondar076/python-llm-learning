@@ -22,3 +22,14 @@ def compute_retrieval_metrics(top_chunks: list[dict], relevant_doc_ids: list[str
         "hit_at_k": hit_at_k(top_chunks, relevant_doc_ids),
         "reciprocal_rank": reciprocal_rank(top_chunks, relevant_doc_ids),
     }
+
+
+def summarize_metric(values: list[float]) -> dict:
+    if not values:
+        return {"avg": 0.0, "min": 0.0, "max": 0.0}
+
+    return {
+        "avg": sum(values) / len(values),
+        "min": min(values),
+        "max": max(values),
+    }
