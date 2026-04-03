@@ -17,3 +17,4 @@ class GraphState(MessagesState):
     title_filter: str | None
     doc_id_filter: str | None
     retrieval_confidence: float
+    retrieval_can_answer: bool

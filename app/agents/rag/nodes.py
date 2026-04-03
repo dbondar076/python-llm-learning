@@ -1,15 +1,18 @@
 from langchain_core.messages import AIMessage
 
-from app.agents.rag.edges import decide_retrieval_route
 from app.agents.rag.state import GraphState
 from app.services.agent_runtime import should_force_rag_for_resolved_question
 from app.services.rag_answer_service import NO_ANSWER
+from app.services.rag_judge_service import judge_retrieval_answerability
 from app.services.rag_tools import (
     route_question_with_llm,
     direct_answer_tool,
     clarify_question_tool,
+    search_chunks_tool,
     generate_grounded_answer_tool,
 )
+from app.services.rag_retrieval_service import compute_retrieval_confidence
+from app.services.retrievers.factory import build_retriever
 from app.settings import RAG_TOP_K
 
 
@@ -27,11 +30,6 @@ async def route_node(state: GraphState) -> GraphState:
         "question": state["question"],
         "original_question": state.get("original_question"),
         "messages": state.get("messages", []),
-        "records": state.get("records", []),
-        "top_k": state.get("top_k", RAG_TOP_K),
-        "min_score": state.get("min_score"),
-        "title_filter": state.get("title_filter"),
-        "doc_id_filter": state.get("doc_id_filter"),
     }
 
 
@@ -62,26 +60,30 @@ async def clarify_node(state: GraphState) -> GraphState:
 
 
 async def retrieve_node(state: GraphState) -> GraphState:
-    question = state["question"]
-    records = state["records"]
-    top_k = state.get("top_k", RAG_TOP_K)
-    min_score = state.get("min_score")
-    title_filter = state.get("title_filter")
-    doc_id_filter = state.get("doc_id_filter")
+    retriever = build_retriever(state["records"])
 
-    decision, top_chunks, confidence = decide_retrieval_route(
-        question=question,
-        records=records,
-        top_k=top_k,
-        min_score=min_score,
-        title_filter=title_filter,
-        doc_id_filter=doc_id_filter,
+    chunks = await search_chunks_tool(
+        question=state["question"],
+        retriever=retriever,
+        top_k=state.get("top_k", RAG_TOP_K),
+        title_filter=state.get("title_filter"),
+        doc_id_filter=state.get("doc_id_filter"),
+    )
+
+    confidence = compute_retrieval_confidence(
+        query=state["question"],
+        chunks=chunks,
+    )
+
+    retrieval_can_answer = await judge_retrieval_answerability(
+        question=state["question"],
+        chunks=chunks,
     )
 
     return {
-        "top_chunks": top_chunks,
+        "top_chunks": chunks,
         "retrieval_confidence": confidence,
-        "route": decision,
+        "retrieval_can_answer": retrieval_can_answer,
     }
 
 
@@ -90,12 +92,11 @@ async def answer_node(state: GraphState) -> GraphState:
         messages=state.get("messages", []),
         chunks=state.get("top_chunks", []),
     )
+
     messages = list(state.get("messages", []))
     messages.append(AIMessage(content=answer))
 
-    normalized_answer = (answer or "").strip()
-
-    if normalized_answer == NO_ANSWER:
+    if answer.strip() == NO_ANSWER:
         return {
             "answer": NO_ANSWER,
             "route": "fallback",

@@ -73,6 +73,15 @@ def get_backoff_delay(attempt: int) -> float:
     return settings.LLM_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
 
 
+def build_openai_json_format(schema: dict, schema_name: str = "structured_output") -> dict:
+    return {
+        "type": "json_schema",
+        "name": schema_name,
+        "schema": schema,
+        "strict": True,
+    }
+
+
 def reset_runtime_state() -> None:
     global _LLM_SEMAPHORE, _LLM_SEMAPHORE_LIMIT
 
@@ -80,6 +89,10 @@ def reset_runtime_state() -> None:
     _LLM_SEMAPHORE = None
     _LLM_SEMAPHORE_LIMIT = None
     FLAKY_ATTEMPTS.clear()
+
+
+def build_json_cache_key(prompt: str, schema: dict) -> str:
+    return f"{prompt}\n__SCHEMA__\n{json.dumps(schema, sort_keys=True, ensure_ascii=False)}"
 
 
 # ----------------------------
@@ -224,7 +237,8 @@ def run_text_prompt_real(prompt: str) -> str:
 
 
 def run_json_prompt_real(prompt: str, schema: dict) -> str:
-    cached = get_cached_value(JSON_CACHE, prompt)
+    cache_key = build_json_cache_key(prompt, schema)
+    cached = get_cached_value(JSON_CACHE, cache_key)
     if cached is not None:
         logger.info("JSON cache hit")
         return cached
@@ -232,15 +246,16 @@ def run_json_prompt_real(prompt: str, schema: dict) -> str:
     logger.info("JSON cache miss")
 
     client = get_openai_client()
+    response_format = build_openai_json_format(schema)
 
     response = client.responses.create(
         model="gpt-5-mini",
         input=prompt,
-        text={"format": schema},
+        text={"format": response_format},
     )
 
     result = response.output_text
-    set_cached_value(JSON_CACHE, prompt, result)
+    set_cached_value(JSON_CACHE, cache_key, result)
     return result
 
 
@@ -277,13 +292,15 @@ async def run_text_prompt_async_real(prompt: str) -> str:
 async def run_json_prompt_async_real(prompt: str, schema: dict) -> str:
     import time
 
-    cached = get_cached_value(JSON_CACHE, prompt)
+    cache_key = build_json_cache_key(prompt, schema)
+    cached = get_cached_value(JSON_CACHE, cache_key)
     if cached is not None:
         logger.info("JSON cache hit")
         return cached
 
     logger.info("JSON cache miss")
     client = get_openai_client()
+    response_format = build_openai_json_format(schema)
 
     async with get_llm_semaphore():
         logger.info("LLM REAL json call")
@@ -294,14 +311,14 @@ async def run_json_prompt_async_real(prompt: str, schema: dict) -> str:
             client.responses.create,
             model="gpt-5-mini",
             input=prompt,
-            text={"format": schema},
+            text={"format": response_format},
         )
 
         elapsed = time.perf_counter() - start
         logger.info("LLM REAL json call finished in %.2fs", elapsed)
 
         result = response.output_text
-        set_cached_value(JSON_CACHE, prompt, result)
+        set_cached_value(JSON_CACHE, cache_key, result)
         return result
 
 
