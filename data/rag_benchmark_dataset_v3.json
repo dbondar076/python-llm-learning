@@ -21,6 +21,31 @@
       "text": "This is the travel notes document. The travel notes mention the city Lisbon. The travel notes mention the city Kyoto. The travel notes mention the city Reykjavik."
     },
     {
+      "doc_id": "doc_movies_partial_v3",
+      "title": "Movie Summaries",
+      "text": "Solar Drift is a science fiction movie. Glass Harbor is a mystery drama movie. Moonline Echo is a futuristic drama movie. Neon Skies is an adventure movie."
+    },
+    {
+      "doc_id": "doc_other_movies_v3",
+      "title": "Other Movie Facts",
+      "text": "Star Horizon was directed by Elena Cross. Crimson Nebula was directed by Victor Hale. Silent Orbit was directed by Dana Mercer. Ember Falls was directed by Lucas Wynn."
+    },
+    {
+      "doc_id": "doc_project_notes_v3",
+      "title": "Internal Project Notes",
+      "text": "Solar Drift is the codename of an internal optimization project. Moonline Echo is the codename of an analytics dashboard. Glass Harbor is the codename of a migration effort."
+    },
+    {
+      "doc_id": "doc_team_watchlist_v3",
+      "title": "Team Watchlist",
+      "text": "This is the team watchlist document. The first movie in the team watchlist is Neon Skies. The second movie in the team watchlist is Glass Harbor. The third movie in the team watchlist is Solar Drift."
+    },
+    {
+      "doc_id": "doc_book_notes_v3",
+      "title": "Book Notes",
+      "text": "Snow Planet Rising is an unfinished manuscript. The Ice Crown Protocol is a draft title. These books do not have confirmed authors in the notes."
+    },
+    {
       "doc_id": "doc_noise_1_v3",
       "title": "Random Office Notes",
       "text": "Office reminders: buy printer paper, schedule a team sync, update the sprint board, and clean the coffee machine."
@@ -29,6 +54,67 @@
       "doc_id": "doc_noise_2_v3",
       "title": "Grocery List",
       "text": "Buy apples, oranges, rice, yogurt, tea, and dark chocolate."
+    },
+
+    {
+      "doc_id": "doc_movie_release_notes_v3",
+      "title": "Movie Release Notes",
+      "text": "Solar Drift premiered in spring. Glass Harbor premiered in autumn. Moonline Echo had a limited release. Neon Skies was delayed before release."
+    },
+    {
+      "doc_id": "doc_movie_reviews_v3",
+      "title": "Movie Reviews",
+      "text": "Solar Drift received positive reviews for its visuals. Glass Harbor was praised for atmosphere. Moonline Echo was noted for its futuristic tone. Neon Skies divided critics."
+    },
+    {
+      "doc_id": "doc_movie_cast_notes_v3",
+      "title": "Movie Cast Notes",
+      "text": "Lena Hart appeared in promotional material for Solar Drift. Nora Blythe was interviewed about Glass Harbor. Iris Dane discussed Moonline Echo at a festival. Owen Reed promoted Neon Skies."
+    },
+    {
+      "doc_id": "doc_movie_titles_only_v3",
+      "title": "Movie Titles Index",
+      "text": "Solar Drift. Glass Harbor. Moonline Echo. Neon Skies. Silent Orbit. Ember Falls."
+    },
+    {
+      "doc_id": "doc_personal_media_notes_v3",
+      "title": "Personal Media Notes",
+      "text": "My media notes mention Silent Orbit, Solar Drift, and Ember Falls. I also wrote down Glass Harbor and Moonline Echo for later."
+    },
+    {
+      "doc_id": "doc_alt_watchlist_v3",
+      "title": "Weekend Watchlist",
+      "text": "This is the weekend watchlist. The first movie in the weekend watchlist is Glass Harbor. The second movie is Silent Orbit. The last movie in the weekend watchlist is Neon Skies."
+    },
+    {
+      "doc_id": "doc_books_partial_v3",
+      "title": "Science Fiction Books",
+      "text": "Dune is a science fiction novel. Foundation is a classic science fiction work. Hyperion is often recommended in science fiction reading lists."
+    },
+    {
+      "doc_id": "doc_books_authors_v3",
+      "title": "Book Author Notes",
+      "text": "Dune was written by Frank Herbert. Foundation was written by Isaac Asimov. Hyperion was written by Dan Simmons."
+    },
+    {
+      "doc_id": "doc_books_drafts_v3",
+      "title": "Book Draft Titles",
+      "text": "Snow Planet Rising is a working title. The Ice Crown Protocol is another draft title. No final author attribution is included here."
+    },
+    {
+      "doc_id": "doc_travel_guides_v3",
+      "title": "Travel Guides",
+      "text": "Lisbon is known for hills and trams. Kyoto is known for temples and gardens. Reykjavik is known for geothermal pools and northern landscapes."
+    },
+    {
+      "doc_id": "doc_travel_candidates_v3",
+      "title": "Travel Candidates",
+      "text": "Possible destinations include Tallinn, Prague, and Vienna. These are candidate cities for a future travel plan."
+    },
+    {
+      "doc_id": "doc_city_mentions_v3",
+      "title": "City Mentions",
+      "text": "Tallinn is a city. Vienna is a city. Prague is a city. None of these were confirmed in the travel notes."
     }
   ],
   "cases": [
@@ -73,6 +159,30 @@
       "expected_answer_contains": ["moonline echo"]
     },
     {
+      "name": "personal_watchlist_vs_team_watchlist",
+      "category": "hard_disambiguation",
+      "question": "What is the first movie in the personal watchlist?",
+      "expected_route": "answer",
+      "relevant_doc_ids": ["doc_watchlist_v3"],
+      "expected_answer_contains": ["silent orbit"]
+    },
+    {
+      "name": "team_watchlist_first_item",
+      "category": "hard_disambiguation",
+      "question": "What is the first movie in the team watchlist?",
+      "expected_route": "answer",
+      "relevant_doc_ids": ["doc_team_watchlist_v3"],
+      "expected_answer_contains": ["neon skies"]
+    },
+    {
+      "name": "weekend_watchlist_last_item",
+      "category": "hard_disambiguation",
+      "question": "What is the last movie in the weekend watchlist?",
+      "expected_route": "answer",
+      "relevant_doc_ids": ["doc_alt_watchlist_v3"],
+      "expected_answer_contains": ["neon skies"]
+    },
+    {
       "name": "director_solar_drift_paraphrase",
       "category": "answerable_paraphrased",
       "question": "Who is the director of Solar Drift?",
@@ -95,6 +205,22 @@
       "expected_route": "answer",
       "relevant_doc_ids": ["doc_movies_v3"],
       "expected_answer_contains": ["lena hart"]
+    },
+    {
+      "name": "director_solar_drift_hard",
+      "category": "hard_disambiguation",
+      "question": "Who directed Solar Drift?",
+      "expected_route": "answer",
+      "relevant_doc_ids": ["doc_movies_v3"],
+      "expected_answer_contains": ["anna kovacs"]
+    },
+    {
+      "name": "director_moonline_echo_hard",
+      "category": "hard_disambiguation",
+      "question": "Who directed Moonline Echo?",
+      "expected_route": "answer",
+      "relevant_doc_ids": ["doc_movies_v3"],
+      "expected_answer_contains": ["pavel orlov"]
     },
     {
       "name": "favorite_books_paraphrase",
@@ -183,23 +309,23 @@
       "category": "ambiguous_local",
       "question": "What is the first movie in the watchlist?",
       "expected_route": "answer",
-      "relevant_doc_ids": ["doc_watchlist_v3"],
-      "expected_answer_contains": ["silent orbit"]
+      "relevant_doc_ids": ["doc_watchlist_v3", "doc_team_watchlist_v3", "doc_alt_watchlist_v3"],
+      "expected_answer_contains_any": ["silent orbit", "neon skies", "glass harbor"]
     },
     {
       "name": "watchlist_generic_last",
       "category": "ambiguous_local",
       "question": "What is the last movie in the watchlist?",
       "expected_route": "answer",
-      "relevant_doc_ids": ["doc_watchlist_v3"],
-      "expected_answer_contains": ["moonline echo"]
+      "relevant_doc_ids": ["doc_watchlist_v3", "doc_alt_watchlist_v3"],
+      "expected_answer_contains_any": ["moonline echo", "neon skies"]
     },
     {
       "name": "books_generic_one",
       "category": "ambiguous_local",
       "question": "Name one book from the books document.",
       "expected_route": "answer",
-      "relevant_doc_ids": ["doc_books_v3"],
+      "relevant_doc_ids": ["doc_books_v3", "doc_books_partial_v3"],
       "expected_answer_contains_any": [
         "dune",
         "foundation",
@@ -212,103 +338,118 @@
       "category": "ambiguous_local",
       "question": "Name one city from the travel document.",
       "expected_route": "answer",
-      "relevant_doc_ids": ["doc_travel_v3"],
+      "relevant_doc_ids": ["doc_travel_v3", "doc_travel_guides_v3"],
       "expected_answer_contains_any": [
         "lisbon",
         "kyoto",
         "reykjavik"
       ]
     },
+
+    {
+      "name": "solar_drift_project_confusion",
+      "category": "hard_unanswerable",
+      "question": "Who leads the Solar Drift project?",
+      "expected_route": "fallback",
+      "relevant_doc_ids": ["doc_project_notes_v3"]
+    },
+    {
+      "name": "snow_planet_rising_author_hard",
+      "category": "hard_unanswerable",
+      "question": "Who wrote Snow Planet Rising?",
+      "expected_route": "fallback",
+      "relevant_doc_ids": ["doc_book_notes_v3", "doc_books_drafts_v3"]
+    },
     {
       "name": "missing_movie_rating",
       "category": "unanswerable_missing_field",
       "question": "What rating does the movie Solar Drift have?",
-      "relevant_doc_ids": [],
-      "expected_route": "fallback"
+      "expected_route": "fallback",
+      "relevant_doc_ids": ["doc_movies_v3", "doc_movie_reviews_v3"]
     },
     {
       "name": "missing_movie_budget",
       "category": "unanswerable_missing_field",
       "question": "What budget did the movie Neon Skies have?",
-      "relevant_doc_ids": [],
-      "expected_route": "fallback"
+      "expected_route": "fallback",
+      "relevant_doc_ids": ["doc_movies_v3"]
     },
     {
       "name": "unknown_movie_director",
-      "category": "unanswerable_missing_field",
+      "category": "unanswerable_missing_entity",
       "question": "Who directed the movie Galactic War 3000?",
-      "relevant_doc_ids": [],
-      "expected_route": "fallback"
+      "expected_route": "fallback",
+      "relevant_doc_ids": []
     },
     {
       "name": "invented_entity_question",
       "category": "unanswerable_missing_entity",
       "question": "What is MoonScript Ultra AI Framework?",
-      "relevant_doc_ids": [],
-      "expected_route": "fallback"
+      "expected_route": "fallback",
+      "relevant_doc_ids": []
     },
     {
       "name": "unknown_book_author",
       "category": "unanswerable_missing_field",
       "question": "Who wrote the book Snow Planet Rising?",
-      "relevant_doc_ids": [],
-      "expected_route": "fallback"
+      "expected_route": "fallback",
+      "relevant_doc_ids": ["doc_book_notes_v3", "doc_books_drafts_v3"]
     },
     {
       "name": "solar_drift_rating_missing",
       "category": "unanswerable_missing_field",
       "question": "What rating does Solar Drift have?",
-      "relevant_doc_ids": [],
-      "expected_route": "fallback"
+      "expected_route": "fallback",
+      "relevant_doc_ids": ["doc_movies_v3", "doc_movie_reviews_v3"]
     },
     {
       "name": "solar_drift_budget_missing",
       "category": "unanswerable_missing_field",
       "question": "What budget did Solar Drift have?",
-      "relevant_doc_ids": [],
-      "expected_route": "fallback"
+      "expected_route": "fallback",
+      "relevant_doc_ids": ["doc_movies_v3"]
     },
     {
       "name": "glass_harbor_budget_missing",
       "category": "unanswerable_missing_field",
       "question": "What was the budget of Glass Harbor?",
-      "relevant_doc_ids": [],
-      "expected_route": "fallback"
+      "expected_route": "fallback",
+      "relevant_doc_ids": ["doc_movies_v3"]
     },
     {
       "name": "neon_skies_budget_missing",
       "category": "unanswerable_missing_field",
       "question": "What budget did Neon Skies have?",
-      "relevant_doc_ids": [],
-      "expected_route": "fallback"
+      "expected_route": "fallback",
+      "relevant_doc_ids": ["doc_movies_v3"]
     },
     {
       "name": "unknown_movie_director_2",
       "category": "unanswerable_missing_entity",
       "question": "Who directed Star Horizon 9?",
-      "relevant_doc_ids": [],
-      "expected_route": "fallback"
+      "expected_route": "fallback",
+      "relevant_doc_ids": []
     },
     {
       "name": "unknown_movie_actor",
       "category": "unanswerable_missing_entity",
       "question": "Who starred in Crimson Nebula?",
-      "relevant_doc_ids": [],
-      "expected_route": "fallback"
+      "expected_route": "fallback",
+      "relevant_doc_ids": ["doc_other_movies_v3"]
     },
     {
       "name": "unknown_book_author_2",
       "category": "unanswerable_missing_entity",
       "question": "Who wrote The Ice Crown Protocol?",
-      "relevant_doc_ids": [],
-      "expected_route": "fallback"
+      "expected_route": "fallback",
+      "relevant_doc_ids": ["doc_book_notes_v3", "doc_books_drafts_v3"]
     },
     {
       "name": "unknown_travel_city",
       "category": "unanswerable_missing_entity",
       "question": "Is Tallinn mentioned in the travel notes?",
-      "relevant_doc_ids": [],
-      "expected_route": "fallback"
+      "expected_route": "fallback",
+      "relevant_doc_ids": ["doc_city_mentions_v3", "doc_travel_candidates_v3"]
     }
   ]
 }

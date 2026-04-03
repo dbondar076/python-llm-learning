@@ -41,7 +41,7 @@ def test_print_retriever_eval_report() -> None:
     global_top1_scores: list[float] = []
 
     metrics_by_category: dict[str, dict[str, list[float]]] = {}
-    worst_cases: list[dict] = []
+    retrieval_issues: list[dict] = []
 
     for case in answerable_cases:
         relevant_doc_ids = case.get("relevant_doc_ids", [])
@@ -65,6 +65,8 @@ def test_print_retriever_eval_report() -> None:
         hit = metrics["hit_at_k"]
         rr = metrics["reciprocal_rank"]
         top1_score = float(top_chunks[0].get("score", 0.0))
+        top1_doc_id = top_chunks[0].get("doc_id")
+        returned_doc_ids = [chunk.get("doc_id") for chunk in top_chunks]
         category = case.get("category", "uncategorized")
 
         global_hit_scores.append(hit)
@@ -82,7 +84,6 @@ def test_print_retriever_eval_report() -> None:
         metrics_by_category[category]["reciprocal_rank"].append(rr)
         metrics_by_category[category]["top1_score"].append(top1_score)
 
-        top1_doc_id = top_chunks[0].get("doc_id")
         print(
             f"{case['name']}: "
             f"category={category}, "
@@ -92,16 +93,30 @@ def test_print_retriever_eval_report() -> None:
             f"top1_score={top1_score:.4f}"
         )
 
+        issue_reasons: list[str] = []
+
         if rr < 1.0:
-            worst_cases.append(
+            issue_reasons.append("rr<1.0")
+
+        if hit == 0.0:
+            issue_reasons.append("hit@3==0")
+
+        if top1_doc_id not in relevant_doc_ids:
+            issue_reasons.append("top1_not_relevant")
+
+        if issue_reasons:
+            retrieval_issues.append(
                 {
                     "name": case["name"],
                     "category": category,
                     "question": case["question"],
                     "relevant_doc_ids": relevant_doc_ids,
+                    "returned_doc_ids": returned_doc_ids,
                     "top1_doc_id": top1_doc_id,
                     "top1_score": top1_score,
+                    "hit": hit,
                     "rr": rr,
+                    "reasons": issue_reasons,
                     "top_chunks": top_chunks,
                 }
             )
@@ -119,25 +134,34 @@ def test_print_retriever_eval_report() -> None:
         print(f"mrr    -> {summarize_metric(category_metrics['reciprocal_rank'])}")
         print(f"top1   -> {summarize_metric(category_metrics['top1_score'])}")
 
-    if worst_cases:
-        worst_cases.sort(key=lambda item: (item["rr"], item["top1_score"]))
-        print("\n=== Worst answerable retrieval cases ===")
-        for case in worst_cases[:10]:
+    if retrieval_issues:
+        retrieval_issues.sort(
+            key=lambda item: (
+                item["hit"],
+                item["rr"],
+                item["top1_score"],
+            )
+        )
+
+        print("\n=== Retrieval issue cases ===")
+        for case in retrieval_issues[:15]:
             print(
                 f"- {case['name']} | "
                 f"category={case['category']} | "
+                f"reasons={case['reasons']} | "
+                f"hit@3={case['hit']:.2f} | "
                 f"rr={case['rr']:.2f} | "
                 f"top1_doc={case['top1_doc_id']} | "
                 f"top1_score={case['top1_score']:.4f}"
             )
             print(f"  question: {case['question']}")
             print(f"  relevant_doc_ids: {case['relevant_doc_ids']}")
+            print(f"  returned_doc_ids: {case['returned_doc_ids']}")
             print(
-                "  returned_doc_ids: "
-                f"{[chunk.get('doc_id') for chunk in case['top_chunks']]}"
+                "  returned_scores: "
+                f"{[round(float(chunk.get('score', 0.0)), 4) for chunk in case['top_chunks']]}"
             )
 
-    # Мягкие sanity-check'и, чтобы тест был полезен не только как print-report
     average_hit = sum(global_hit_scores) / len(global_hit_scores)
     average_rr = sum(global_rr_scores) / len(global_rr_scores)
     average_top1 = sum(global_top1_scores) / len(global_top1_scores)
