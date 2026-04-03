@@ -28,17 +28,19 @@ def build_answerability_prompt(question: str, chunks: list[ScoredChunk]) -> str:
     context = build_context(merged_chunks)
 
     return (
-        "You are validating whether a user's question can be answered strictly from retrieved context.\n\n"
+        "You are validating whether a user's question can be answered strictly and unambiguously from the retrieved context.\n\n"
         "Return JSON with:\n"
         "- can_answer: true or false\n"
         "- reason: short explanation\n\n"
         "Rules:\n"
-        "- true ONLY if the answer is explicitly present in the context.\n"
+        "- true ONLY if the answer is explicitly and unambiguously present in the context.\n"
         "- false if the context only mentions the entity but not the requested field.\n"
         "- false if the context is about a similar but different entity.\n"
         "- false if answering would require guessing, outside knowledge, or inference.\n"
         "- false for missing attributes like rating, budget, author, leader, date, etc. when not explicitly stated.\n"
-        "- false for unknown or invented entities not explicitly resolved by the context.\n\n"
+        "- false for unknown or invented entities not explicitly resolved by the context.\n"
+        "- false if multiple entities or multiple candidate answers are present and the question does not clearly specify which one is meant.\n"
+        "- Do not guess based on the top chunk alone if the full retrieved context is ambiguous.\n\n"
         f"Question:\n{question}\n\n"
         f"Context:\n{context}"
     )
