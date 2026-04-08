@@ -1,104 +1,110 @@
-# Python LLM Text Analyzer
+# LLM RAG Backend (FastAPI + LangGraph)
 
-A production-style learning project that demonstrates how to build an LLM-powered backend service with FastAPI, OpenAI API, structured outputs, evaluation workflows, and Retrieval-Augmented Generation (RAG).
+Production-style backend service demonstrating how to build reliable LLM-powered systems with Retrieval-Augmented Generation (RAG), agent routing, evaluation workflows, and streaming.
 
+## Overview
 
-## Features
+This project explores how to evolve a simple LLM integration into a robust, production-ready backend system.
 
-- LLM text analysis:
-  - `/analyze` — returns category + summary
-  - `/summarize`
-  - `/classify`
-  - `/extract-user`
-- Batch processing:
-  - `/analyze-many`
-  - `/analyze-many-safe` — degraded fallback when LLM requests fail
-- Robust LLM integration:
-  - retries with exponential backoff
-  - timeout handling
-  - degraded fallback mode
-  - dynamic runtime settings support
-  - async concurrency control via semaphore
-  - TTL caching
-  - structured logging
-  - request ID tracing
-- RAG (Retrieval-Augmented Generation)
-  - `/rag/search` — semantic chunk retrieval
-  - `/rag/answer` — manual RAG agent
-  - `/rag/answer/stream` — streaming responses
-  - `/rag/answer/langgraph` — LangGraph-based agent
-  - `/rag/answer/langgraph/stream` — LangGraph streaming
-- Agent capabilities
-  - dynamic routing: `direct` / `clarify` / `rag`
-  - conversation-aware question rewriting
-  - memory across requests (via LangGraph checkpointer)
-  - fallback handling when context is insufficient
-- Streaming
-  - incremental token streaming via API
-  - structured events: `meta`, `chunk`, `done`
-- Support for:
-  - `top_k`
-  - `min_score`
-  - `title_filter`
-  - `doc_id_filter`
-- Chunk merging experiments
-- RAG API and dependency override tests
+It covers the full lifecycle:
+- prompt-based APIs →
+- reliability layer (retry, timeout, caching) →
+- evaluation pipelines →
+- RAG →
+- agent-based orchestration →
+- graph-based execution (LangGraph)
 
+The goal is not just to call an LLM, but to control, evaluate, and scale its behavior.
 
-## Agent Architecture
+## Key Capabilities
 
-The project includes two RAG agent implementations:
+### LLM APIs
+- /analyze, /summarize, /classify
+- structured JSON outputs (schema-validated)
 
-### 1. Manual Agent
-Custom orchestration with explicit control over:
-- routing
-- memory handling
-- retrieval and answer generation
+### Reliability Layer
+- retries with exponential backoff
+- timeout handling
+- degraded fallback mode
+- async concurrency control (semaphore)
+- TTL caching
+- request tracing (request_id)
+- structured logging
 
-### 2. LangGraph Agent
-A production-style graph-based agent using LangGraph:
-- nodes (route, retrieve, answer, fallback)
+### RAG (Retrieval-Augmented Generation)
+- semantic chunk retrieval
+- configurable filters (top_k, min_score, etc.)
+- chunk merging strategies
+- answer generation with context grounding
+
+### Agent System
+- dynamic routing:
+- direct — answer without retrieval
+- clarify — ask follow-up question
+- rag — retrieve + answer
+- conversation-aware query rewriting
+- fallback when context is insufficient
+
+### LangGraph Integration
+- graph-based orchestration
+- explicit nodes: route → retrieve → answer → fallback
 - conditional edges
-- state management
-- built-in checkpoint-based memory
-
-### Flow
-User question
-- memory-aware rewrite (if needed)
-- route decision (LLM + heuristics)
-  - direct → answer
-  - clarify → clarification
-  - rag → retrieval → answer / fallback
-
-### Memory
-
-- conversation state stored via LangGraph checkpointer (thread_id-based sessions)
-- messages tracked using:
-  - `HumanMessage`
-  - `AIMessage`
-- previous context used for:
-  - resolving ambiguous queries
-  - improving retrieval quality
-  - disambiguating follow-up questions ("what about that?")
+- checkpoint-based memory (thread sessions)
 
 ### Streaming
+- token streaming via NDJSON
+- structured events: meta, chunk, done
 
-LangGraph agent supports streaming responses:
+## Architecture
+The system is built around a multi-stage LLM pipeline:
+### 1.	Input
+- user query
+- optional conversation history
+### Rewrite (optional)
+- resolves ambiguity using memory
+### Routing
+- LLM + heuristics decide:
+- direct / clarify / rag
+### Retrieval (RAG path)
+- semantic search over chunks
+- filtering + ranking
+### Answer Generation
+- grounded in retrieved context
+- fallback if insufficient
+### Streaming (optional)
+- incremental token output
 
-- transport: NDJSON (newline-delimited JSON)
-- implemented via `graph.astream(...)`
+## Agent Implementations
+### Manual Agent
+- explicit orchestration
+- full control over flow
+- easier to debug
 
+### LangGraph Agent
+- declarative graph execution
+- built-in state management
+- persistent memory via checkpointer
 
-## Prompt Engineering & Evaluation
+| Feature         | Manual Agent | LangGraph Agent |
+|-----------------|-------------|-----------------|
+| Control         | High        | Medium          |
+| Abstraction     | Low         | High            |
+| Memory          | Custom      | Built-in        |
+| Streaming       | Manual      | Native          |
+| Scalability     | Medium      | High            |
+| Debuggability   | High        | Medium          |
 
-- Prompt versions (`v1`, `v2`)
-- Dataset-based evaluation (`eval_cases.json`)
-- Metrics:
+### Evaluation & Prompt Engineering
+- versioned prompts (v1, v2)
+- dataset-driven evaluation
+- metrics:
   - pass rate
-  - avg words / chars
   - latency
-- LLM-as-judge for prompt comparison
-- Prompt tournament experiments
+  - response size
+- LLM-as-judge
+- prompt tournament experiments
+
+This enables systematic prompt improvement, not trial-and-error.
 
 
 ## Project Structure
@@ -106,159 +112,66 @@ LangGraph agent supports streaming responses:
 ```
 app/
   api.py
-  models.py
-  dependencies.py
-  error_handlers.py
-  request_context.py
+  routers/
+  services/
+    llm_service.py
+    rag_retrieval_service.py
+    rag_answer_service.py
+    manual_agent_service.py
   agents/
     rag/
-      state.py
+      graph.py
       nodes.py
       edges.py
-      graph.py
-      runtime.py
-      response.py
-  routers/
-    analysis.py
-    rag.py
-    health.py
-  services/
-    agent_runtime.py
-    analyzer.py
-    conversation_memory.py
-    llm_service.py
-    llm_prompts.py
-    llm_parsers.py
-    llm_cache.py
-    llm_errors.py
-    llm_schemas.py
-    logging_config.py
-    manual_agent_service.py
-    openai_client.py
-    prompt_registry.py
-    rag_answer_service.py
-    rag_index_service.py
-    rag_retrieval_service.py
-    rag_tools.py
+
 tests/
-  test_api.py
-  test_rag_api.py
-  test_rag_api_fast.py
-  test_rag_api_dependency_override.py
-  test_rag_search_api.py
-  test_retry_timeout.py
-  test_backoff_degraded.py
-  test_eval_summary.py
-
 experiments/
-  lesson*.py
 ```
 
-## Setup
+## Getting Started
 
-### 1. Clone repo
-
-```bash
-git clone <your-repo> 
-cd python-llm-learning 
-```
-### 2. Create and activate a virtual environment
+### Install
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
+pip install -r requirements.txt
 ```
-### 3. Install dependencies
-
-```bash
-pip install -r requirements.txt 
-```
-### 4. Create .env
+### Configure
 
 ```env
-OPENAI_API_KEY=your_api_key_here 
-```
-### Add other settings if needed, for example:
-
-```env
+OPENAI_API_KEY=your_api_key
 USE_REAL_LLM=true
 LLM_TIMEOUT_SECONDS=30
 LLM_MAX_RETRIES=3
 LLM_CONCURRENCY_LIMIT=5
 ```
-
-## Run the API
-
-```bash
-uvicorn app.api:app --reload 
-```
-### Swagger UI:
-```text
- http://127.0.0.1:8000/docs 
-```
-
-## Run Tests
-
-### Fast tests
+### Run
 
 ```bash
-pytest -m fast 
+uvicorn app.api:app --reload
 ```
-### Integration tests
+### Swagger:
+
+```code
+http://127.0.0.1:8000/docs
+```
+### Testing
 
 ```bash
-pytest -m integration 
-```
-### All tests
-
-```bash
-pytest 
-```
-### Optional future marker
-
-If real OpenAI smoke tests are added:
-```bash
-pytest -m real_llm
+pytest              # all tests
+pytest -m fast      # fast unit tests
+pytest -m integration
 ```
 
-## Run Experiments
+## Example
 
-### Prompt evaluation
+### RAG Answer
 
-```bash 
-python experiments/lesson46.py 
-```
-
-### Prompt Tournament (LLM-as-judge)
-
-```bash
-python experiments/lesson48.py 
-```
-
-
-## Example API Response
-
-```json
-{
-  "text": "What is Python?",
-  "category": "question",
-  "summary": "Asking what Python is"
-}
-```
-
-## Example RAG Response
 ```json
 {
   "answer": "Python can be used for web development, automation, data analysis, and AI.",
-  "chunks": [
-    {
-      "doc_id": "doc1",
-      "title": "Python",
-      "chunk_id": "doc1_chunk_1",
-      "text": "Python is a high-level programming language.",
-      "score": 0.55
-    }
-  ]
+  "chunks": [...]
 }
 ```
 
@@ -271,55 +184,37 @@ python experiments/lesson48.py
 - pytest
 - LangGraph
 - LangChain Core (messages abstraction)
+- pytest
 
-## Key Concepts Covered
+## Design Focus
 
-- Prompt engineering
-- Structured LLM output (JSON schema)
-- Retry / timeout handling
-- Degraded fallback patterns
-- Observability (logging + request ID)
-- Evaluation pipelines
-- LLM-as-judge
-- Prompt experimentation
-- Embeddings
-- Semantic search
-- Retrieval-Augmented Generation (RAG)
-- Agent-based architectures
-- Graph-based orchestration (LangGraph)
-- Conversational memory
-- Streaming LLM responses
+This project focuses on engineering challenges of LLM systems:
 
-## Manual vs LangGraph Agent
-
-| Feature         | Manual Agent | LangGraph Agent |
-|-----------------|-------------|-----------------|
-| Control         | High        | Medium          |
-| Abstraction     | Low         | High            |
-| Memory          | Custom      | Built-in        |
-| Streaming       | Manual      | Native          |
-| Scalability     | Medium      | High            |
-| Debuggability   | High        | Medium          |
+- controlling non-deterministic outputs
+- handling failures and timeouts
+- grounding answers in data (RAG)
+- routing between multiple strategies
+- evaluating prompt quality
+- managing conversational context
 
 ## Roadmap
 
-- Real LLM smoke tests
-- Better dataset coverage for evaluation
-- Improved chunking strategies
-- Optional vector database integration
+- vector DB integration
+- improved retrieval scoring
+- stronger evaluation datasets
+- real LLM smoke tests
 
-## Why This Project
+## Why This Project Matters
 
-This project demonstrates how to evolve from a simple LLM integration to a production-style agent system:
+Most LLM demos stop at “call the model”.
 
-- start with prompt-based APIs
-- add reliability (retry, timeout, caching)
-- introduce evaluation workflows
-- build RAG pipelines
-- evolve into agent-based architectures
-- migrate to graph-based orchestration (LangGraph)
+This project explores what comes next:
+- reliability
+- evaluation
+- architecture
+- scalability
 
-It is designed as a learning path for backend engineers entering the LLM space.
+It is designed as a bridge between simple LLM usage and production systems.
 
 ## License
 

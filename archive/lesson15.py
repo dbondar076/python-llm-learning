@@ -17,3 +17,15 @@ def get_api_key() -> str | None:
 if __name__ == "__main__":
     api_key = get_api_key()
     print(api_key)
+
+
+# from pydantic_settings import BaseSettings, SettingsConfigDict
+#
+#
+# class Settings(BaseSettings):
+#     openai_api_key: str
+#
+#     model_config = SettingsConfigDict(env_file=".env")
+#
+#
+# settings = Settings()

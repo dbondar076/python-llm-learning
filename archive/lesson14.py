@@ -39,3 +39,44 @@ def extract_all_safe(texts: list[str]) -> list[UserRecord]:
 if __name__ == "__main__":
     result = extract_all_safe(texts)
     print(result)
+
+
+# from typing import TypedDict
+#
+#
+# class UserRecord(TypedDict):
+#     name: str
+#     age: int
+#
+#
+# def extract_user_safe(text: str) -> UserRecord | None:
+#     try:
+#         name_part, age_part = text.split(",", 1)
+#
+#         name_items = name_part.split(":", 1)
+#         age_items = age_part.split(":", 1)
+#
+#         if len(name_items) != 2 or len(age_items) != 2:
+#             return None
+#
+#         name = name_items[1].strip()
+#         age = int(age_items[1].strip())
+#
+#         if not name or age < 0:
+#             return None
+#
+#         return {"name": name, "age": age}
+#
+#     except ValueError:
+#         return None
+#
+#
+# def extract_all_safe(texts: list[str]) -> list[UserRecord]:
+#     result: list[UserRecord] = []
+#
+#     for text in texts:
+#         user = extract_user_safe(text)
+#         if user is not None:
+#             result.append(user)
+#
+#     return result
