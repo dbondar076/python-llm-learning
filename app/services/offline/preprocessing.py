@@ -1,8 +1,10 @@
 import json
 import re
 from typing import Callable, Literal
-
 from pydantic import BaseModel, Field, ValidationError
+
+from app.services.embeddings.service import get_embeddings
+
 
 class Document(BaseModel):
     id: str = Field(min_length=1)
@@ -118,21 +120,27 @@ def build_chunks(
     return result
 
 
-def prepare_chunks(
+def prepare_chunks_with_embeddings(
     file_path: str,
     chunk_size: int = 12,
     overlap: int = 3,
     strategy: Literal["words", "sentences"] = "words",
-
-) -> list[Chunk] | None:
+) -> tuple[list[Chunk], list[list[float]]] | None:
     documents = load_documents(file_path)
 
     if documents is None:
         return None
 
-    return build_chunks(
+    chunks = build_chunks(
         documents,
         chunk_size=chunk_size,
         overlap=overlap,
         strategy=strategy,
     )
+
+    if not chunks:
+        return chunks, []
+
+    embeddings = get_embeddings([chunk.text for chunk in chunks])
+
+    return chunks, embeddings

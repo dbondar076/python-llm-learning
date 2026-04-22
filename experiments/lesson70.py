@@ -1,15 +1,11 @@
 import asyncio
-import math
 
-from openai import OpenAI
 from pydantic import BaseModel, Field
 
-from app.settings import OPENAI_API_KEY
 from app.services.llm_service import run_text_prompt_with_retry_async
-from app.services.offline.preprocessing import prepare_chunks, Chunk
-
-
-client = OpenAI(api_key=OPENAI_API_KEY)
+from app.services.offline.preprocessing import prepare_chunks_with_embeddings, Chunk
+from app.services.embeddings.service import get_embeddings
+from app.services.embeddings.utils import cosine_similarity
 
 
 class ScoredChunk(BaseModel):
@@ -21,25 +17,6 @@ class ScoredChunk(BaseModel):
 
 
 NO_ANSWER = "I don't know based on the provided context."
-
-
-def cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
-    dot = sum(a * b for a, b in zip(vec1, vec2))
-    norm1 = math.sqrt(sum(a * a for a in vec1))
-    norm2 = math.sqrt(sum(b * b for b in vec2))
-
-    if norm1 == 0 or norm2 == 0:
-        return 0.0
-
-    return dot / (norm1 * norm2)
-
-
-def get_embeddings(texts: list[str]) -> list[list[float]]:
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=texts,
-    )
-    return [item.embedding for item in response.data]
 
 
 def retrieve_top_chunks_semantic(
@@ -127,14 +104,18 @@ async def answer_with_semantic_rag(
 
 
 async def main() -> None:
-    chunks = prepare_chunks("../documents.json", chunk_size=12, overlap=3, strategy="sentences")
+    prepared_data = prepare_chunks_with_embeddings(
+        "../documents.json",
+        chunk_size=12,
+        overlap=3,
+        strategy="sentences"
+    )
 
-    if chunks is None:
+    if prepared_data is None:
         print("Failed to prepare chunks.")
         return
 
-    chunk_texts = [chunk.text for chunk in chunks]
-    chunk_embeddings = get_embeddings(chunk_texts)
+    chunks, chunk_embeddings = prepared_data
 
     questions = [
         "What can Python be used for?",
