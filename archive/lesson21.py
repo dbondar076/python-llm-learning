@@ -34,3 +34,25 @@ if __name__ == "__main__":
 
     for user in users:
         print(user.name, user.age)
+
+
+# from pydantic import BaseModel, Field, ValidationError
+#
+#
+# class User(BaseModel):
+#     name: str = Field(min_length=1)
+#     age: int = Field(ge=0)
+#
+#
+# def parse_users_safe(data: list[dict]) -> list[User]:
+#     result: list[User] = []
+#
+#     for item in data:
+#         try:
+#             user = User(**item)
+#             result.append(user)
+#         except ValidationError:
+#             # здесь лучше logger или сбор ошибок
+#             pass
+#
+#     return result

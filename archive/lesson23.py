@@ -52,3 +52,24 @@ if __name__ == "__main__":
     result = analyze_all(texts)
     save_results(result, "text_analysis.json")
     print(result)
+
+
+# import json
+# from pathlib import Path
+# from typing import Literal
+#
+# from pydantic import BaseModel
+#
+#
+# class TextAnalysis(BaseModel):
+#     text: str
+#     category: Literal["question", "statement", "short"]
+#     summary: str
+#
+#
+# def save_results(results: list[TextAnalysis], file_path: str) -> None:
+#     data = [item.model_dump() for item in results]
+#
+#     path = Path(file_path)
+#     with path.open("w", encoding="utf-8") as file:
+#         json.dump(data, file, indent=2, ensure_ascii=False)

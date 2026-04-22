@@ -26,3 +26,20 @@ def get_user_label(user: User) -> str:
 if __name__ == "__main__":
     for user in users:
         print(get_user_label(user))
+
+
+# from dataclasses import dataclass
+#
+#
+# @dataclass
+# class User:
+#     name: str
+#     age: int
+#
+#     def is_adult(self) -> bool:
+#         return self.age >= 18
+#
+#
+# def get_user_label(user: User) -> str:
+#     status = "adult" if user.is_adult() else "minor"
+#     return f"{user.name} ({status})"

@@ -47,3 +47,16 @@ if __name__ == "__main__":
 
     for item in result:
         print(item.text, item.category, item.summary)
+
+
+# from typing import Literal
+# from pydantic import BaseModel, Field
+#
+#
+# Category = Literal["question", "statement", "short"]
+#
+#
+# class TextAnalysis(BaseModel):
+#     text: str = Field(min_length=1)
+#     category: Category
+#     summary: str = Field(min_length=1)

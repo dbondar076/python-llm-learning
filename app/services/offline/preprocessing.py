@@ -1,7 +1,8 @@
 import json
 import re
-from pydantic import BaseModel, Field, ValidationError
+from typing import Callable, Literal
 
+from pydantic import BaseModel, Field, ValidationError
 
 class Document(BaseModel):
     id: str = Field(min_length=1)
@@ -14,20 +15,6 @@ class Chunk(BaseModel):
     title: str = Field(min_length=1)
     chunk_id: str = Field(min_length=1)
     text: str = Field(min_length=1)
-
-
-class ScoredChunk(BaseModel):
-    doc_id: str = Field(min_length=1)
-    title: str = Field(min_length=1)
-    chunk_id: str = Field(min_length=1)
-    text: str = Field(min_length=1)
-    score: int = Field(ge=1)
-
-
-STOP_WORDS = {
-    "a", "an", "the", "is", "are", "am", "be", "can", "for", "of", "to",
-    "what", "how", "why", "when", "where", "in", "on", "at", "and", "or"
-}
 
 
 def load_documents(file_path: str) -> list[Document] | None:
@@ -63,15 +50,17 @@ def load_documents(file_path: str) -> list[Document] | None:
         return None
 
 
-def split_text_into_chunks(text: str, chunk_size: int = 80, overlap: int = 0) -> list[str]:
+def split_text_into_chunks(
+    text: str,
+    chunk_size: int = 80,
+    overlap: int = 0
+) -> list[str]:
     words = text.split()
 
     if chunk_size <= 0:
         raise ValueError("chunk_size must be greater than 0")
-
     if overlap < 0:
         raise ValueError("overlap cannot be negative")
-
     if overlap >= chunk_size:
         raise ValueError("overlap must be smaller than chunk_size")
 
@@ -91,19 +80,31 @@ def split_text_into_chunks(text: str, chunk_size: int = 80, overlap: int = 0) ->
     return chunks
 
 
+def split_text_into_sentence_chunks(text: str) -> list[str]:
+    sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+    return [sentence for sentence in sentences if sentence]
+
+
 def build_chunks(
     documents: list[Document],
     chunk_size: int = 12,
     overlap: int = 0,
+    strategy: Literal["words", "sentences"] = "words",
+
 ) -> list[Chunk]:
     result: list[Chunk] = []
 
-    for doc in documents:
-        text_chunks = split_text_into_chunks(
-            doc.text,
+    if strategy == "words":
+        split_fn: Callable[[str], list[str]] = lambda text: split_text_into_chunks(
+            text,
             chunk_size=chunk_size,
             overlap=overlap,
         )
+    else:
+        split_fn = split_text_into_sentence_chunks
+
+    for doc in documents:
+        text_chunks = split_fn(doc.text)
 
         for index, chunk_text in enumerate(text_chunks, start=1):
             chunk = Chunk(
@@ -117,57 +118,21 @@ def build_chunks(
     return result
 
 
-def tokenize(text: str) -> list[str]:
-    raw_tokens = re.findall(r"\b\w+\b", text.lower())
-    return [token for token in raw_tokens if token not in STOP_WORDS]
+def prepare_chunks(
+    file_path: str,
+    chunk_size: int = 12,
+    overlap: int = 3,
+    strategy: Literal["words", "sentences"] = "words",
 
-
-def score_chunk(query: str, chunk: Chunk) -> int:
-    query_tokens = set(tokenize(query))
-    chunk_tokens = set(tokenize(chunk.text))
-    return len(query_tokens & chunk_tokens)
-
-
-def retrieve_top_chunks(
-    query: str,
-    chunks: list[Chunk],
-    top_k: int = 3,
-) -> list[ScoredChunk]:
-    if top_k <= 0:
-        raise ValueError("top_k must be greater than 0")
-
-    scored_chunks: list[ScoredChunk] = []
-
-    for chunk in chunks:
-        chunk_score = score_chunk(query, chunk)
-
-        if chunk_score > 0:
-            scored_chunk = ScoredChunk(
-                doc_id=chunk.doc_id,
-                title=chunk.title,
-                chunk_id=chunk.chunk_id,
-                text=chunk.text,
-                score=chunk_score,
-            )
-            scored_chunks.append(scored_chunk)
-
-    scored_chunks.sort(key=lambda item: item.score, reverse=True)
-    return scored_chunks[:top_k]
-
-
-if __name__ == "__main__":
-    documents = load_documents("../documents.json")
+) -> list[Chunk] | None:
+    documents = load_documents(file_path)
 
     if documents is None:
-        print("Failed to load documents.")
-    else:
-        chunks = build_chunks(documents, chunk_size=12, overlap=3)
+        return None
 
-        query = "What can Python be used for?"
-        results = retrieve_top_chunks(query, chunks, top_k=3)
-
-        print("QUERY:", query)
-        print()
-
-        for item in results:
-            print(item)
+    return build_chunks(
+        documents,
+        chunk_size=chunk_size,
+        overlap=overlap,
+        strategy=strategy,
+    )
